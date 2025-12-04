@@ -2,56 +2,27 @@
 
 ![Status](https://img.shields.io/badge/Estado-En_Desarrollo-yellow)
 ![TFG](https://img.shields.io/badge/Tipo-TFG-blue)
-![Python](https://img.shields.io/badge/Backend-Python-3776AB?logo=python&logoColor=white)
-![Kotlin](https://img.shields.io/badge/Mobile-Kotlin-7F52FF?logo=kotlin&logoColor=white)
+![Python](https://img.shields.io/badge/BackEnd-Python-3776AB?logo=python&logoColor=white)
+![Kotlin](https://img.shields.io/badge/FrontEnd-Kotlin-7F52FF?logo=kotlin&logoColor=white)
 ![AWS](https://img.shields.io/badge/Cloud-AWS-232F3E?logo=amazon-aws&logoColor=white)
 
-## 📖 Descripción del Proyecto
+## Descripción del Proyecto
 
-**Posdata** es un sistema integral diseñado para proteger a las personas mayores frente a ataques de phishing (SMS y notificaciones fraudulentas). El proyecto combina una aplicación móvil accesible con una arquitectura serverless en la nube capaz de analizar amenazas en tiempo real mediante Inteligencia Artificial.
+**Posdata** es un sistema diseñado para proteger a las personas mayores frente a ataques de phishing. El proyecto combina una aplicación móvil accesible con una arquitectura serverless en la nube capaz de analizar amenazas en tiempo real mediante Inteligencia Artificial.
 
-Este repositorio contiene el código fuente, los modelos de IA y la documentación asociada al Trabajo de Fin de Grado (TFG).
+Este repositorio contiene el código fuente, los modelos de IA y la documentación asociada al Trabajo de Fin de Grado.
 
-## 🏗️ Arquitectura del Sistema
+## Arquitectura del Sistema
 
 El sistema se divide en tres bloques fundamentales:
 
 1.  **Frontend (Android):** Aplicación nativa desarrollada en Kotlin que intercepta notificaciones y SMS, priorizando la accesibilidad.
-2.  **Backend (AWS Serverless):** Núcleo de procesamiento basado en AWS Lambda, API Gateway y DynamoDB.
-3.  **Inteligencia Artificial:** Modelo híbrido de detección de phishing optimizado con TFLite.
+2.  **Backend (AWS Serverless):** Núcleo de procesamiento basado en AWS Lambda.
+3.  **Inteligencia Artificial:** Modelo híbrido de detección de phishing.
 
-*(Aquí podrás insertar tu diagrama de arquitectura de Draw.io más adelante)*
+## Estructura del Repositorio
 
-## 🛠️ Stack Tecnológico
-
-### Backend & Cloud ☁️
-* **Lenguaje:** Python 3.x
-* **Compute:** AWS Lambda (Serverless)
-* **API:** Amazon API Gateway
-* **Base de Datos:** Amazon DynamoDB (NoSQL)
-* **Almacenamiento:** Amazon S3 (Artefactos y modelos)
-* **Notificaciones:** Amazon SNS
-
-### Inteligencia Artificial 🧠
-* **Entrenamiento:** Google Colab (Jupyter Notebooks)
-* **Librerías:** TensorFlow, Keras, TextBlob, Pandas, Scikit-learn
-* **Inferencia:** TensorFlow Lite (TFLite) para optimización en entornos limitados.
-
-### Frontend (Mobile) 📱
-* **OS:** Android
-* **Lenguaje:** Kotlin
-* **IDE:** Android Studio
-* **UI:** Jetpack Compose (Enfoque en accesibilidad)
-* **Networking:** Retrofit + Coroutines
-
-### Herramientas de Apoyo 🔧
-* **Diseño UI/UX:** Figma
-* **Documentación:** LaTeX (Overleaf)
-* **Diagramas:** Draw.io
-
-## 📂 Estructura del Repositorio
-
-Este repositorio sigue una estructura de **Monorepo** para centralizar todos los aspectos del TFG:
+Este repositorio sigue la siguiente estructura, por medio de la cual se centralizan todos los aspectos del TFG:
 
 ```text
 posdata/
