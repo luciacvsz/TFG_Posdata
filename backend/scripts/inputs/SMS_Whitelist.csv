@@ -1,0 +1,67 @@
+Type,Value,Description
+WHITELIST,TGSS,Tesorería General Seguridad Social
+WHITELIST,SegSocial,Seguridad Social Información General
+WHITELIST,INSS,Instituto Nacional de la Seguridad Social
+WHITELIST,AEAT,Agencia Tributaria
+WHITELIST,Clave,Sistema Cl@ve
+WHITELIST,ClavePIN,Código temporal Cl@ve
+WHITELIST,DGT,Dirección General de Tráfico
+WHITELIST,MiDGT,App oficial Dirección General de Tráfico
+WHITELIST,060,Teléfono de Atención al Ciudadano
+WHITELIST,ProtecCivil,Alertas de Protección Civil
+WHITELIST,FNMT,Fábrica Nacional de Moneda y Timbre
+WHITELIST,CitaSanit,Citas sanitarias genéricas
+WHITELIST,CMadrid,Comunidad de Madrid (Avisos generales)
+WHITELIST,SaludMadrid,SERMAS (Citas médicas Madrid)
+WHITELIST,GVA_Sanitat,Generalitat Valenciana Sanidad
+WHITELIST,CatSalut,Servei Català de la Salut
+WHITELIST,SAS,Servicio Andaluz de Salud
+WHITELIST,Osakidetza,Servicio Vasco de Salud
+WHITELIST,SERGAS,Servicio Gallego de Salud
+WHITELIST,CaixaBank,CaixaBank Comunicaciones Generales
+WHITELIST,CaixaProtect,Avisos de seguridad CaixaBank
+WHITELIST,Santander,Banco Santander
+WHITELIST,Sabadell,Banco Sabadell
+WHITELIST,BBVA,BBVA Comunicaciones
+WHITELIST,Unicaja,Unicaja Banco
+WHITELIST,Kutxabank,Kutxabank
+WHITELIST,Ibercaja,Ibercaja Banco
+WHITELIST,Abanca,Abanca
+WHITELIST,ING,ING Direct
+WHITELIST,Correos,Correos España
+WHITELIST,Iberdrola,Facturación y avisos Iberdrola
+WHITELIST,Endesa,Facturación y avisos Endesa
+WHITELIST,Naturgy,Facturación y avisos Naturgy
+WHITELIST,Repsol,Repsol
+WHITELIST,Telefonica,Telefónica de España
+WHITELIST,Movistar,Movistar Clientes
+WHITELIST,Vodafone,Vodafone España
+WHITELIST,Orange,Orange España
+WHITELIST,Jazztel,Jazztel Clientes
+WHITELIST,O2,O2 España
+WHITELIST,Mapfre,Seguros Mapfre
+WHITELIST,MutuaMad,Mutua Madrileña
+WHITELIST,Sanitas,Sanitas Citas y Pólizas
+WHITELIST,CruzRoja,Cruz Roja
+WHITELIST,Google,Códigos de verificación de cuenta Google / Gmail
+WHITELIST,G-Code,Autenticación de dos factores (2FA) de Google
+WHITELIST,Microsoft,Códigos de seguridad cuenta Microsoft/Outlook
+WHITELIST,Facebook,Códigos de recuperación de acceso Facebook
+WHITELIST,WhatsApp,Códigos de instalación/verificación WhatsApp
+WHITELIST,Apple,Apple ID códigos de doble factor
+WHITELIST,Amazon,Avisos de entrega y códigos de seguridad Amazon
+WHITELIST,Verify,Pasarela genérica de códigos SMS
+WHITELIST,AUTHMSG,Identificador genérico para códigos de autenticación
+WHITELIST,MiOperador,Identificador genérico usado por algunas compañías
+WHITELIST,Yoigo,Cliente Yoigo
+WHITELIST,MasMovil,Grupo MásMóvil
+WHITELIST,Pepephone,Cliente Pepephone
+WHITELIST,Digi,Digi Mobil
+WHITELIST,DigiMobil,Variante de Digi
+WHITELIST,Lowi,Cliente Lowi
+WHITELIST,Simyo,Cliente Simyo
+WHITELIST,Finetwork,Cliente Finetwork
+WHITELIST,VirginTel,Virgin Telco
+WHITELIST,Euskaltel,Grupo Euskaltel
+WHITELIST,BuzonVoz,Notificaciones genéricas de mensajes de voz
+WHITELIST,112,Emergenciass
