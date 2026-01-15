@@ -3,7 +3,7 @@ import json
 import os
 from common.security import get_sha512_hash
 from common.validators import extract_urls
-from common.database import get_item_by_pk_sk
+from common.database import get_item_by_pk_sk, check_user_exists
 
 # Environment variables
 TABLE_NAME = os.environ.get('LISTS_TABLE_NAME')
@@ -74,8 +74,8 @@ def lambda_handler(event, context):
             body = event
         
         user_id = body.get('user_id')
-        if not user_id:
-            raise ValueError("Missing user_id in the event data")
+        if not user_id or not check_user_exists(user_id, table):
+            raise ValueError("User ID is required and must exist.")
         
         sender = body.get('sender', UNKNOWN_SENDER)
 

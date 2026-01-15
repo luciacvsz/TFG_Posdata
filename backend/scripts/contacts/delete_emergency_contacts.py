@@ -6,19 +6,16 @@ from common.validators import is_valid_email, is_valid_phone_number
 from common.responses import create_response
 
 # Environment variables
-
 USERS_TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
 CONTACTS_TABLE_NAME = os.environ.get('CONTACTS_TABLE_NAME')
 REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 
 # Initialize DynamoDB resource and tables
-
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 users_table = dynamodb.Table(USERS_TABLE_NAME)
 contacts_table = dynamodb.Table(CONTACTS_TABLE_NAME)
 
 #Auxiliary functions
-
 def dynamodb_deletion(user_id, contacts):
     '''
     Delete emergency contacts for a user from the DynamoDB table using batch writer.
@@ -43,7 +40,6 @@ def dynamodb_deletion(user_id, contacts):
             batch.delete_item(Key=key)
     
 # Lambda handler
-
 def lambda_handler(event, context):
     '''
     Delete emergency contacts for a user.
@@ -80,12 +76,12 @@ def lambda_handler(event, context):
                 body = event['body']
         else:
             body = {}
-        user_id = body.get('user_id')
-        contacts = body.get('emergency_contacts', [])
-
-        if not user_id or not isinstance(user_id, str):
-            raise ValueError("Invalid or missing user_id.")
         
+        user_id = body.get('user_id')
+        if not user_id or not isinstance(user_id, str) or not check_user_exists(user_id, users_table):
+            raise ValueError("User ID is required and must exist.")
+        
+        contacts = body.get('emergency_contacts')
         if not contacts or not isinstance(contacts, list):
             raise ValueError("Invalid or missing emergency_contacts.")
         
@@ -93,14 +89,13 @@ def lambda_handler(event, context):
         if not exists:
             raise ValueError(f"User with user_id {user_id} does not exist.")
         
+        print("Deleting emergency contacts from DynamoDB.")
         dynamodb_deletion(user_id, contacts)
 
         print("Emergency contacts deleted successfully.")
-
-        return create_response({'message': 'Emergency contacts deleted successfully.'})    
+        return create_response({'message': 'Emergency contacts deleted successfully.'}) 
+       
     except ValueError as ve:
-        print(f"ValueError: {str(ve)}")
-        return create_response({'error': str(ve)}, status_code=400)
+        return create_response({'ValueError': str(ve)}, status_code=400)
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
         return create_response({'error': 'Internal server error'}, status_code=500)

@@ -5,36 +5,47 @@ from common.database import check_user_exists
 from common.responses import create_response
 
 # Environment variables
-
-TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
+USERS_TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
+CONTACTS_TABLE_NAME = os.environ.get('CONTACTS_TABLE_NAME')
 REGION_NAME = os.environ.get('REGION_NAME')
 
 # Initialize DynamoDB resource and table
-
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
-table = dynamodb.Table(TABLE_NAME)
+users_table = dynamodb.Table(USERS_TABLE_NAME)
+contacts_table = dynamodb.Table(CONTACTS_TABLE_NAME)
 
 #Auxiliary functions
-
-def dynamodb_deletion(user_id):
+def dynamodb_deactivation(user_id):
     '''
-    Delete a user from the DynamoDB table.
+    Deactivate a user in the DynamoDB tables.
 
     Parameters
     ----------
         user_id : str
             The primary key of the user.
     '''
-
-    table.put_item(
+    users_table.put_item(
         Item={
             'PK': user_id,
             'ACTIVE': False
         }
     )
 
-# Lambda handler
+    response = contacts_table.query(
+        KeyConditionExpression='PK = :pk',
+        ExpressionAttributeValues={':pk': user_id}
+    )
 
+    with contacts_table.batch_writer() as batch:
+        for item in response.get('Items', []):
+            batch.delete_item(
+                Key={
+                    'PK': item['PK'],
+                    'SK': item['SK']
+                }
+            )
+
+# Lambda handler
 def lambda_handler(event, context):
     '''
     AWS Lambda handler to deactivate a user.
@@ -47,6 +58,8 @@ def lambda_handler(event, context):
             The runtime information of the Lambda function.
     '''
     try:
+        print("Processing deactivate user request.")
+
         if 'body' in event:
             if isinstance(event['body'], str):
                 try:
@@ -57,15 +70,18 @@ def lambda_handler(event, context):
                 body = event['body']
         else:
             body = {}
-        user_id = body.get('user_id')
-
-        exists = check_user_exists(user_id, table)
-
-        if not exists:
-            return create_response({'error': 'User does not exist'}, status_code=404)
         
-        dynamodb_deletion(user_id)
+        user_id = body.get('user_id')
+        if not user_id or not check_user_exists(user_id, users_table):
+            raise ValueError("User ID is required and must exist.")
+        
+        print(f"Deactivating user {user_id} in DynamoDB.")
+        dynamodb_deactivation(user_id)
 
+        print(f"User {user_id} deactivated successfully.")
         return create_response({'message': 'User deactivated successfully'})
+    
+    except ValueError as ve:
+        return create_response({'ValueError': str(ve)}, status_code=400)
     except Exception as e:
         return create_response({'error': 'Internal server error'}, status_code=500)
