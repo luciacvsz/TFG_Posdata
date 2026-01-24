@@ -1,6 +1,8 @@
 import json
 import time
 
+# ESTO ES UN DUMMY!!!!!!!!!!!!!!!!!!!!!!!
+
 #Lambda function
 def lambda_handler(event, context):
     try:
@@ -38,3 +40,6 @@ def lambda_handler(event, context):
         print(f"AI SMS Check completed successfully. Veredict: {veredict}")
 
         return output_payload
+    except Exception as e:
+        print(f"Error during AI SMS Check: {str(e)}")
+        raise e

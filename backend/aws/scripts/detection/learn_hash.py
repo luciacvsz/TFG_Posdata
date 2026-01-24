@@ -5,21 +5,17 @@ from common.security import get_sha512_hash
 import json
 
 # Environment variables
-
 TABLE_NAME = os.environ.get('LISTS_TABLE_NAME') 
 REGION_NAME = os.environ.get('REGION_NAME')
 
 # Constants
-
 PARTITION_KEY = 'BLACKLIST_HASH'
 
 # Initialize DynamoDB resource and table
-
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 table = dynamodb.Table(TABLE_NAME)
 
 #Auxiliary functions
-
 def process_message(payload):
     '''
     Process the incoming payload to store the SHA-512 hash of the message in DynamoDB.
@@ -60,7 +56,6 @@ def process_message(payload):
     return True
 
 # Lambda handler
-
 def lambda_handler(event, context):
     '''
     AWS Lambda handler to process incoming messages and store their SHA-512 hashes in DynamoDB.

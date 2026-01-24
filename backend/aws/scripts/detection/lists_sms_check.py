@@ -1,9 +1,11 @@
+from email import message
 import boto3
 import json
 import os
 from common.security import get_sha512_hash
 from common.validators import extract_urls
 from common.database import get_item_by_pk_sk, check_user_exists
+from common.notification import Veredict
 
 # Environment variables
 TABLE_NAME = os.environ.get('LISTS_TABLE_NAME')
@@ -17,7 +19,7 @@ UNKNOWN_SENDER = 'Unknown'
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 table = dynamodb.Table(TABLE_NAME)
 
-# Initialize Lambda client
+# Initialize SQS client
 sqs_client = boto3.client('sqs', region_name=REGION_NAME)
 
 # Auxiliary functions
@@ -79,15 +81,15 @@ def lambda_handler(event, context):
         
         sender = body.get('sender', UNKNOWN_SENDER)
 
-        message = body.get('message', '')
+        message = body.get('message')
         if not message:
-            raise ValueError("Message content is empty")
+            raise ValueError("Message content is required.")
         
         output_payload = {
             "user_id": user_id,
             "sender": sender,
             "message": message,
-            "veredict": "UNKNOWN",
+            "veredict": Veredict.UNKNOWN.value,
             "reason": "Not found in any list",
         }
         
@@ -97,11 +99,38 @@ def lambda_handler(event, context):
         if hash_data:
             print("Message hash found in blacklist.")
             output_payload.update({
-                "veredict": "MALICIOUS",
-                "reason": "Message hash is blacklisted"
+                "veredict": Veredict.MALICIOUS.value,
+                "reason": "Message hash is blacklisted",
                 "details": hash_data.get('DESCRIPTION', '')
             })
             return output_payload
+
+        print("Extracting URLs from message and checking against blacklist and whitelist.")
+        urls = extract_urls(message)
+        if urls:
+            whitelisted = 0
+            for url in urls:
+                url_data = get_item_by_pk_sk(table, 'BLACKLIST_URL', url)
+                if url_data:
+                    print(f"URL found in blacklist: {url}. Learning hash.")
+                    trigger_hash_learning_async(message, f"Blocked by blacklisted URL: {url}")
+                    output_payload.update({
+                        "veredict": Veredict.MALICIOUS.value,
+                        "reason": "Message contains blacklisted URL",
+                        "details": url_data.get('DESCRIPTION', '')
+                    })
+                    return output_payload
+                else:
+                    url_data = get_item_by_pk_sk(table, 'WHITELIST_URL', url)
+                    if url_data:
+                        whitelisted += 1
+            if whitelisted == len(urls):
+                print("All URLs are whitelisted.")
+                output_payload.update({
+                    "veredict": Veredict.SAFE.value,
+                    "reason": "All URLs are whitelisted"
+                })
+                return output_payload
 
         print("Checking sender against whitelist.")
         if sender != UNKNOWN_SENDER:
@@ -111,30 +140,16 @@ def lambda_handler(event, context):
                 if sender_data:
                     print("Sender found in whitelist.")
                     output_payload.update({
-                        "veredict": "SAFE",
+                        "veredict": Veredict.SAFE.value,
                         "reason": "Sender is whitelisted",
                         "details": sender_data.get('DESCRIPTION', '')
                     })
                     return output_payload
             else:
-                raise ValueError("Sender must be a string")  
-        
-        print("Extracting URLs from message and checking against blacklist.")
-        urls = extract_urls(message)
-        if urls:
-            for url in urls:
-                url_data = get_item_by_pk_sk(table, 'BLACKLIST_URL', url)
-                if url_data:
-                    print(f"URL found in blacklist: {url}. Learning hash.")
-                    trigger_hash_learning_async(message, f"Blocked by blacklisted URL: {url}")
-                    output_payload.update({
-                        "veredict": "MALICIOUS",
-                        "reason": "Message contains blacklisted URL",
-                        "details": url_data.get('DESCRIPTION', '')
-                    })
-                    return output_payload
+                raise ValueError("Sender must be a string")        
         
         print("No matches found in any list. Veredict is UNKNOWN. Forwarding to AI for further analysis.")
+        
         return output_payload
 
     except ValueError as ve:
