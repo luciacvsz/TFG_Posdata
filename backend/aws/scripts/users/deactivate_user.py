@@ -6,13 +6,16 @@ from common.responses import create_response
 
 # Environment variables
 USERS_TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
-CONTACTS_TABLE_NAME = os.environ.get('CONTACTS_TABLE_NAME')
 REGION_NAME = os.environ.get('REGION_NAME')
+
+if not USERS_TABLE_NAME:
+    raise ValueError("USERS_TABLE_NAME environment variable not set")
+if not REGION_NAME:
+    raise ValueError("REGION_NAME environment variable not set")
 
 # Initialize DynamoDB resource and table
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 users_table = dynamodb.Table(USERS_TABLE_NAME)
-contacts_table = dynamodb.Table(CONTACTS_TABLE_NAME)
 
 #Auxiliary functions
 def dynamodb_deactivation(user_id):
@@ -30,20 +33,6 @@ def dynamodb_deactivation(user_id):
             'ACTIVE': False
         }
     )
-
-    response = contacts_table.query(
-        KeyConditionExpression='PK = :pk',
-        ExpressionAttributeValues={':pk': user_id}
-    )
-
-    with contacts_table.batch_writer() as batch:
-        for item in response.get('Items', []):
-            batch.delete_item(
-                Key={
-                    'PK': item['PK'],
-                    'SK': item['SK']
-                }
-            )
 
 # Lambda handler
 def lambda_handler(event, context):
@@ -77,8 +66,8 @@ def lambda_handler(event, context):
         
         print(f"Deactivating user {user_id} in DynamoDB.")
         dynamodb_deactivation(user_id)
-
         print(f"User {user_id} deactivated successfully.")
+
         return create_response({'message': 'User deactivated successfully'})
     
     except ValueError as ve:
