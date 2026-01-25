@@ -33,7 +33,6 @@ def dynamodb_insertion(user_id, full_name, contact, prefs, emergency_contacts):
         emergency_contacts : list
             List of emergency contacts.
     '''
-
     table.put_item(
         Item={
             'PK': user_id,
@@ -57,6 +56,11 @@ def lambda_handler(event, context):
             The event data passed to the Lambda function.
         context : object
             The context in which the Lambda function is called.
+    
+    Returns
+    -------
+        dict
+            The response object containing the new user ID or error message.
     '''
     try:
         print("Processing create user request.")

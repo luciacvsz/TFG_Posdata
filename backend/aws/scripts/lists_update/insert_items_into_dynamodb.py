@@ -6,23 +6,19 @@ from datetime import datetime, timezone
 from common.responses import create_response
 
 # Environment variables
-
-TABLE_NAME = os.environ.get('LISTS_TABLE_NAME')
+LISTS_TABLE_NAME = os.environ.get('LISTS_TABLE_NAME')
 REGION_NAME = os.environ.get('REGION_NAME')
 
 #  Initialize DynamoDB resource and table
-
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
-table = dynamodb.Table(TABLE_NAME)
+table = dynamodb.Table(LISTS_TABLE_NAME)
 
 # Initialize S3 client
-
 s3 = boto3.client('s3', region_name=REGION_NAME)
 
 # Auxiliary functions
-
 def read_csv_from_s3(content):
-    """
+    '''
     Parse CSV content and return a list of valid data dictionaries.
     
     Parameters
@@ -34,7 +30,7 @@ def read_csv_from_s3(content):
     -------
         list
             A list of dictionaries containing valid data from the CSV. Each dictionary contains 'PK', 'SK', and 'DESCRIPTION' keys.
-    """
+    '''
     csv_file = io.StringIO(content)
     reader = csv.DictReader(csv_file)
     data_list = [row for row in reader if 
@@ -58,7 +54,6 @@ def dynamodb_insertion(data_list):
                 batch.put_item(Item=item)
 
 # Lambda handler
-
 def lambda_handler(event, context):
     '''
     AWS Lambda handler to process S3 event, read CSV file, and insert data into DynamoDB.
@@ -74,13 +69,6 @@ def lambda_handler(event, context):
     -------
         dict
             A dictionary containing the status code and message of the operation.
-    
-    Raises
-    ------
-        ValueError
-            If there are issues with the event data or file content.
-        Exception
-            If there is an error during processing.
     '''
     try:
         if not event.get('Records'):

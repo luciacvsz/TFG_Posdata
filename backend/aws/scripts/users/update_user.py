@@ -44,6 +44,21 @@ def dynamodb_update(user_id, updates):
 
 # Lambda handler
 def lambda_handler(event, context):
+    '''
+    Lambda function to update an existing user in the DynamoDB table.
+
+    Parameters
+    ----------
+        event : dict
+            The event dictionary containing request data.
+        context : object
+            The context object containing runtime information.
+    
+    Returns
+    -------
+        dict
+            The response dictionary.
+    '''
     try:
         print("Processing update user request.")
 

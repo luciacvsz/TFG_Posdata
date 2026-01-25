@@ -61,6 +61,16 @@ def user_notification(info, user_id):
     return file_key
 
 def emergency_contacts_notification(info, user_id):
+    '''
+    Send notifications to the emergency contacts of a user.
+
+    Parameters
+    ----------
+    info : dict
+        The information to be sent in the notification.
+    user_id : str
+        The ID of the user.
+    '''
     user_info = get_item_by_pk_sk(users_table, user_id)
     full_name = user_info.get('FULL_NAME')
     veredict = info.get('veredict')
@@ -118,6 +128,23 @@ def emergency_contacts_notification(info, user_id):
 
 #  Lambda handler
 def lambda_handler(event, context):
+    '''
+    AWS Lambda handler to process SMS check notifications.
+
+    Parameters
+    ----------
+    event : dict
+        The event data from the Lambda invocation.
+    context : object
+        The runtime information of the Lambda function.
+
+    Raises
+    ------
+        ValueError
+            If required fields are missing in the event.
+        Exception
+            For any other errors during processing.
+    '''
     try:
         print("Received veredict. Starting the notification preparation.")
 

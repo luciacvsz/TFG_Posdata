@@ -8,7 +8,7 @@ from common.database import get_item_by_pk_sk, check_user_exists
 from common.notification import Veredict
 
 # Environment variables
-TABLE_NAME = os.environ.get('LISTS_TABLE_NAME')
+LISTS_TABLE_NAME = os.environ.get('LISTS_TABLE_NAME')
 REGION_NAME = os.environ.get('REGION_NAME')
 HASHING_QUEUE_URL = os.environ.get('HASHING_QUEUE_URL')
 
@@ -17,7 +17,7 @@ UNKNOWN_SENDER = 'Unknown'
 
 # Initialize DynamoDB resource and table
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
-table = dynamodb.Table(TABLE_NAME)
+table = dynamodb.Table(LISTS_TABLE_NAME)
 
 # Initialize SQS client
 sqs_client = boto3.client('sqs', region_name=REGION_NAME)

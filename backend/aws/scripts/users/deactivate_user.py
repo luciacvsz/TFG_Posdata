@@ -45,6 +45,11 @@ def lambda_handler(event, context):
             The event data from the Lambda invocation.
         context : object
             The runtime information of the Lambda function.
+    
+    Returns
+    -------
+        dict
+            The response object.
     '''
     try:
         print("Processing deactivate user request.")
