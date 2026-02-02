@@ -2,7 +2,7 @@ import json
 import os
 import boto3
 from datetime import datetime
-from common.dynamodb_utils import get_item_by_pk_sk
+from common.database import get_item_by_pk_sk
 from common.notification import ContactMethod, sms_emergency_contact_notification_message, email_emergency_contact_notification_message
 
 # Environment variables
