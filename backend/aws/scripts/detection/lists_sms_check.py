@@ -1,28 +1,130 @@
-from email import message
 import boto3
 import json
+import logging
 import os
+from botocore.exceptions import ClientError
+from common.database import get_item_by_pk_sk
+from common.notification import Verdict
 from common.security import get_sha512_hash
 from common.validators import extract_urls
-from common.database import get_item_by_pk_sk, check_user_exists
-from common.notification import Veredict
+
+# Setup logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # Environment variables
+REQUIRED_VARS = ['LISTS_TABLE_NAME', 'HASHING_QUEUE_URL']
+for var in REQUIRED_VARS:
+    if not os.environ.get(var):
+        raise RuntimeError(f"Missing required environment variable: {var}")
+    
 LISTS_TABLE_NAME = os.environ.get('LISTS_TABLE_NAME')
-REGION_NAME = os.environ.get('REGION_NAME')
+REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 HASHING_QUEUE_URL = os.environ.get('HASHING_QUEUE_URL')
 
 # Constants
 UNKNOWN_SENDER = 'Unknown'
 
-# Initialize DynamoDB resource and table
+# Initialize resources
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 table = dynamodb.Table(LISTS_TABLE_NAME)
+sqs = boto3.client('sqs', region_name=REGION_NAME)
 
-# Initialize SQS client
-sqs_client = boto3.client('sqs', region_name=REGION_NAME)
+def extract_and_validate_payload(event):
+    '''
+    Extracts and validates the payload from the event.
 
-# Auxiliary functions
+    Parameters
+    ----------
+    event : dict
+        The event data containing SMS details.
+    
+    Returns
+    -------
+    dict
+        The validated payload with user_id, message, and sender.
+
+    Raises
+    ------
+    ValueError
+        If required fields are missing or invalid.
+    '''
+    raw_body = event.get('body')
+    body = json.loads(raw_body) if raw_body and isinstance(raw_body, str) else event
+
+    data = {
+        'user_id': body.get('user_id'),
+        'message': body.get('message'),
+        'sender': str(body.get('sender', UNKNOWN_SENDER)).strip()
+    }
+
+    if not data['user_id'] or not data['message']:
+        raise ValueError("Missing required fields: user_id or message.")
+    
+    return data
+
+def hash_check(message):
+    '''
+    Check if the SHA-512 hash of the message exists in the blacklist.
+
+    Parameters
+    ----------
+    message : str
+        The SMS message content.
+
+    Returns
+    -------
+    dict or None
+        The blacklist entry if found, otherwise None.
+    '''
+    message_hash = get_sha512_hash(message)
+    if hash_data := get_item_by_pk_sk(table, 'BLACKLIST_HASH', message_hash):
+        return {
+            "verdict": Verdict.MALICIOUS.value,
+            "reason": "Message hash is blacklisted",
+            "details": hash_data.get('DESCRIPTION', '')
+        }
+    return None
+
+    
+
+def url_check(urls, message):
+    '''
+    Checks URLs against blacklist and whitelist in the database.
+
+    Parameters
+    ----------
+    urls : list
+        List of URLs extracted from the message.
+    message : str
+        The SMS message content.
+
+    Returns
+    -------
+    dict or None
+        The result of the URL check or None if no conclusive result.
+    '''
+    whitelisted_count = 0
+    for url in urls:
+        if get_item_by_pk_sk(table, 'BLACKLIST_URL', url):
+            trigger_hash_learning_async(message, f"Blocked by blacklisted URL: {url}")
+            return {
+                "verdict": Verdict.MALICIOUS.value,
+                "reason": "Message contains blacklisted URL",
+                "details": f"Blacklisted URL found: {url}"
+            }
+        
+        if get_item_by_pk_sk(table, 'WHITELIST_URL', url):
+            whitelisted_count += 1
+        
+    if whitelisted_count == len(urls):
+        return {
+            "verdict": Verdict.SAFE.value,
+            "reason": "All URLs are whitelisted"
+        }
+    
+    return None
+
 def trigger_hash_learning_async(message, reason):
     '''
     Trigger the asynchronous learning of a message hash by sending a message to the SQS queue.
@@ -34,16 +136,41 @@ def trigger_hash_learning_async(message, reason):
     reason : str
         The reason for learning the hash.
     '''
-    payload = {
-        'message': message,
-        'reason': reason
-    }
-    sqs_client.send_message(
-        QueueUrl=HASHING_QUEUE_URL,
-        MessageBody=json.dumps(payload)
-    )
+    payload = {'message': message, 'reason': reason}
+    try:
+        sqs.send_message(
+            QueueUrl=HASHING_QUEUE_URL,
+            MessageBody=json.dumps(payload)
+        )
+    except ClientError as ce:
+        logger.error(f"Failed to send message to SQS for hash learning: {ce}")
 
-#  Lambda handler
+def sender_check(sender):
+    '''
+    Checks the sender against whitelist in the database.
+
+    Parameters
+    ----------
+    sender : str
+        The sender identifier.
+
+    Returns
+    -------
+    dict or None
+        The result of the sender check or None if not whitelisted.
+    '''
+    if sender == UNKNOWN_SENDER:
+        return None
+    
+    if sender_data := get_item_by_pk_sk(table, 'WHITELIST_SENDER', sender):
+        return {
+            "verdict": Verdict.SAFE.value,
+            "reason": "Sender is whitelisted",
+            "details": sender_data.get('DESCRIPTION', '')
+        }
+    
+    return None
+
 def lambda_handler(event, context):
     '''
     Lambda function to check incoming SMS messages against blacklists and whitelists.
@@ -58,7 +185,7 @@ def lambda_handler(event, context):
     Returns
     -------
     dict
-        The result of the SMS check with veredict and reason.
+        The result of the SMS check with verdict and reason.
     
     Raises
     ------
@@ -67,94 +194,41 @@ def lambda_handler(event, context):
     Exception
         For any other errors during processing.
     '''
-    try:        
-        print("Received SMS. Starting Step Function List Check.")
+    try:
 
-        if 'body' in event and isinstance(event['body'], (str)):
-            body = json.loads(event['body'])
-        else:
-            body = event
-        
-        user_id = body.get('user_id')
-        if not user_id or not check_user_exists(user_id, table):
-            raise ValueError("User ID is required and must exist.")
-        
-        sender = body.get('sender', UNKNOWN_SENDER)
-
-        message = body.get('message')
-        if not message:
-            raise ValueError("Message content is required.")
-        
-        output_payload = {
-            "user_id": user_id,
-            "sender": sender,
-            "message": message,
-            "veredict": Veredict.UNKNOWN.value,
+        # 1. Parsing & validation
+        data = extract_and_validate_payload(event)
+        logger.info(f"Processing SMS check for user: {data['user_id']}") 
+                
+        response = { 
+            "user_id": data['user_id'],
+            "sender": data['sender'],
+            "message": data['message'],
+            "verdict": Verdict.UNKNOWN.value,
             "reason": "Not found in any list",
         }
         
-        print("Checking message hash against blacklist.")
-        message_hash = get_sha512_hash(message)
-        hash_data = get_item_by_pk_sk(table, 'BLACKLIST_HASH', message_hash)
-        if hash_data:
-            print("Message hash found in blacklist.")
-            output_payload.update({
-                "veredict": Veredict.MALICIOUS.value,
-                "reason": "Message hash is blacklisted",
-                "details": hash_data.get('DESCRIPTION', '')
-            })
-            return output_payload
+        # 2. Content Hash Check
+        if hash_result := hash_check(data['message']):
+            response.update(hash_result)
+            return response
 
-        print("Extracting URLs from message and checking against blacklist and whitelist.")
-        urls = extract_urls(message)
-        if urls:
-            whitelisted = 0
-            for url in urls:
-                url_data = get_item_by_pk_sk(table, 'BLACKLIST_URL', url)
-                if url_data:
-                    print(f"URL found in blacklist: {url}. Learning hash.")
-                    trigger_hash_learning_async(message, f"Blocked by blacklisted URL: {url}")
-                    output_payload.update({
-                        "veredict": Veredict.MALICIOUS.value,
-                        "reason": "Message contains blacklisted URL",
-                        "details": url_data.get('DESCRIPTION', '')
-                    })
-                    return output_payload
-                else:
-                    url_data = get_item_by_pk_sk(table, 'WHITELIST_URL', url)
-                    if url_data:
-                        whitelisted += 1
-            if whitelisted == len(urls):
-                print("All URLs are whitelisted.")
-                output_payload.update({
-                    "veredict": Veredict.SAFE.value,
-                    "reason": "All URLs are whitelisted"
-                })
-                return output_payload
+        # 3. URL Analysis
+        urls = list(set(extract_urls(data['message'])))
+        if url_result := url_check(urls, data['message']):
+            response.update(url_result)
+            return response
 
-        print("Checking sender against whitelist.")
-        if sender != UNKNOWN_SENDER:
-            if isinstance(sender, str):
-                sender = sender.strip()
-                sender_data = get_item_by_pk_sk(table, 'WHITELIST_SENDER', sender)
-                if sender_data:
-                    print("Sender found in whitelist.")
-                    output_payload.update({
-                        "veredict": Veredict.SAFE.value,
-                        "reason": "Sender is whitelisted",
-                        "details": sender_data.get('DESCRIPTION', '')
-                    })
-                    return output_payload
-            else:
-                raise ValueError("Sender must be a string")        
-        
-        print("No matches found in any list. Veredict is UNKNOWN. Forwarding to AI for further analysis.")
-        
-        return output_payload
-
+        # 4. Sender Check
+        if sender_result := sender_check(data['sender']):
+            response.update(sender_result)
+            return response
+            
+        return response
+            
     except ValueError as ve:
-        print(f"ValueError: {ve}")
-        raise ve
+        logger.warning(f"Validation error: {ve}")
+        raise
     except Exception as e:
-        print(f"Error processing SMS: {e}")
-        raise e
+        logger.error(f"System Failure: {e}", exc_info=True)
+        raise

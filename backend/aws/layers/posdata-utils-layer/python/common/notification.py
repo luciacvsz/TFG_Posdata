@@ -1,14 +1,14 @@
 from enum import Enum
 
-class Veredict(Enum):
+class Verdict(Enum):
     '''
-    Enum for veredict preferences.
+    Enum for verdict preferences.
 
     Values:
     - SAFE: The item is safe.
     - MALICIOUS: The item is malicious.
     - SUSPICIOUS: The item is suspicious.
-    - UNKNOWN: The item veredict is unknown.
+    - UNKNOWN: The item verdict is unknown.
     '''
     SAFE = 'safe'
     MALICIOUS = 'malicious'
@@ -26,7 +26,7 @@ class ContactMethod(Enum):
     SMS = 'SMS'
     EMAIL = 'Email'
 
-def sms_emergency_contact_notification_message(full_name, veredict):
+def sms_emergency_contact_notification_message(full_name, verdict):
     '''
     Generate an SMS notification message for emergency contacts.
 
@@ -34,8 +34,8 @@ def sms_emergency_contact_notification_message(full_name, veredict):
     ----------
         full_name : str
             The full name of the user.
-        veredict : str
-            The veredict of the item.
+        verdict : str
+            The verdict of the item.
 
     Returns
     -------
@@ -44,14 +44,14 @@ def sms_emergency_contact_notification_message(full_name, veredict):
     '''
     message = None
 
-    if veredict == Veredict.SUSPICIOUS.value:
+    if verdict == Verdict.SUSPICIOUS.value:
         message =  f"POSDATA - AVISO: El teléfono de {full_name} ha recibido un mensaje sospechoso. Te sugerimos llamarle para recordarle que no interactúe con él por seguridad."
-    elif veredict == Veredict.MALICIOUS.value:
+    elif verdict == Verdict.MALICIOUS.value:
         message = f"POSDATA - URGENTE: El dispositivo de {full_name} acaba de recibir un mensaje malicioso. Por favor, contacta con él/ella inmediatamente para evitar que acceda."
 
     return message
 
-def email_emergency_contact_notification_message(full_name, veredict):
+def email_emergency_contact_notification_message(full_name, verdict):
     '''
     Generate an Email notification content (Subject and HTML Body) for emergency contacts.
 
@@ -59,8 +59,8 @@ def email_emergency_contact_notification_message(full_name, veredict):
     ----------
         full_name : str
             The full name of the user.
-        veredict : str
-            The veredict of the item (e.g., Veredict.SUSPICIOUS.value).
+        verdict : str
+            The verdict of the item (e.g., Verdict.SUSPICIOUS.value).
 
     Returns
     -------
@@ -72,7 +72,7 @@ def email_emergency_contact_notification_message(full_name, veredict):
     '''
     message = None
     
-    if veredict == Veredict.SUSPICIOUS.value:
+    if verdict == Verdict.SUSPICIOUS.value:
         subject = f"⚠️ Aviso de Seguridad: Actividad sospechosa - {full_name}"
         color_hex = "#F59E0B"
         title_text = "Actividad Sospechosa Detectada"
@@ -84,7 +84,7 @@ def email_emergency_contact_notification_message(full_name, veredict):
         )
         action_text = "Nivel de Riesgo: MEDIO - PRECAUCIÓN"
 
-    elif veredict == Veredict.MALICIOUS.value:
+    elif verdict == Verdict.MALICIOUS.value:
         subject = f"🛑 URGENTE: Amenaza bloqueada en el dispositivo de {full_name}"
         color_hex = "#DC2626"
         title_text = "AMENAZA MALICIOSA DETECTADA"
