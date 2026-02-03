@@ -117,7 +117,7 @@ def url_check(urls, message):
         if get_item_by_pk_sk(table, 'WHITELIST_URL', url):
             whitelisted_count += 1
         
-    if whitelisted_count == len(urls):
+    if whitelisted_count == len(urls) and len(urls) > 0:
         return {
             "verdict": Verdict.SAFE.value,
             "reason": "All URLs are whitelisted"

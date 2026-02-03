@@ -1,87 +1,103 @@
-import json
-import os
 import boto3
-from datetime import datetime
+import json
+import logging
+import os
+from botocore.exceptions import ClientError
 from common.database import get_item_by_pk_sk
-from common.notification import ContactMethod, sms_emergency_contact_notification_message, email_emergency_contact_notification_message
+from common.notification import sms_emergency_contact_notification_message, email_emergency_contact_notification_message, Verdict
+from datetime import datetime, timezone
+
+# Setup logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # Environment variables
+REQUIRED_VARS = ['RESULTS_BUCKET_NAME', 'USERS_TABLE_NAME', 'SOURCE_EMAIL', 'SMS_SENDER_ID']
+for var in REQUIRED_VARS:
+    if not os.environ.get(var):
+        raise RuntimeError(f"Missing required environment variable: {var}")
+
 RESULTS_BUCKET_NAME = os.environ.get('RESULTS_BUCKET_NAME')
 USERS_TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
-REGION_NAME = os.environ.get('REGION_NAME')
+REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
+SOURCE_EMAIL = os.environ.get('SOURCE_EMAIL')
+SMS_SENDER_ID = os.environ.get('SMS_SENDER_ID')
 
-# Constants
-SOURCE_EMAIL = "alertas_posdata@gmail.com"
-SMS_SENDER_ID = "POSDATA"
-
-# Initialize S3 client
-s3_client = boto3.client('s3', region_name=REGION_NAME)
-
-# Initialize DynamoDB resource and table
+# Initialize resources
+s3 = boto3.client('s3', region_name=REGION_NAME)
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 users_table = dynamodb.Table(USERS_TABLE_NAME)
+sns = boto3.client('sns', region_name=REGION_NAME)
+ses = boto3.client('ses', region_name=REGION_NAME)
 
-# Initialize SNS client
-sns_client = boto3.client('sns', region_name=REGION_NAME)
-
-#Initialize SES client
-ses_client = boto3.client('ses', region_name=REGION_NAME)
-
-# Auxiliary functions
-def user_notification(info, user_id):
+def store_notification_in_s3(info, user_id):
     '''
-    Store the notification data in an S3 bucket.
+    Stores the notification information in S3.
 
     Parameters
     ----------
     info : dict
-        The information to be stored in the S3 bucket.
+        The notification information to store.
     user_id : str
-        The ID of the user.
+        The user ID associated with the notification.
 
     Returns
     -------
     str
-        The key of the stored object in S3.
+        The S3 file key where the notification is stored.
+
+    Raises
+    ------
+    ClientError
+        If there is an error storing the object in S3.
     '''
-    output_payload = info.copy()
-    output_payload.update({
-        'processed_at': datetime.now().isoformat()
-    }) 
+    now = datetime.now(timezone.utc)
+    output_payload = {**info, 'processed_at': now.isoformat()}
+    file_key = f"notifications/{user_id}/{now.strftime('%Y/%m/%d/%H%M%S')}.json"
 
-    file_key = f"notifications/{user_id}/{datetime.now().strftime('%Y/%m/%d/%H%M%S')}.json"
+    try:
+        s3.put_object(
+            Bucket=RESULTS_BUCKET_NAME,
+            Key=file_key,
+            Body=json.dumps(output_payload),
+            ContentType='application/json'
+        )
+        return file_key
+    except ClientError:
+        logger.error(f"Failed to store notification in S3 for user: {user_id}")
+        raise
 
-    s3_client.put_object(
-        Bucket=RESULTS_BUCKET_NAME,
-        Key=file_key,
-        Body=json.dumps(output_payload),
-        ContentType='application/json'
-    )
-
-    return file_key
-
-def emergency_contacts_notification(info, user_id):
+def notify_emergency_contacts(info, user_id):
     '''
-    Send notifications to the emergency contacts of a user.
+    Notifies the emergency contacts of a user via SMS and email.
 
     Parameters
     ----------
     info : dict
-        The information to be sent in the notification.
+        The notification information containing the verdict.
     user_id : str
-        The ID of the user.
+        The user ID whose emergency contacts will be notified.
+
+    Raises
+    ------
+    Exception
+        If there is an error sending notifications.
     '''
     user_info = get_item_by_pk_sk(users_table, user_id)
-    full_name = user_info.get('FULL_NAME')
-    veredict = info.get('veredict')
-    emergency_contacts = user_info.get('EMERGENCY_CONTACTS')
-    phone_numbers = emergency_contacts.get('PHONE_NUMBERS')
-    if phone_numbers != "NONE":
-        sms_body = sms_emergency_contact_notification_message(full_name, veredict)
+    if not user_info:
+        logger.error(f"User not found: {user_id}")
+        return
+    
+    full_name = user_info.get('FULL_NAME', 'User')
+    verdict = info.get('verdict')
+    emergency_contacts = user_info.get('EMERGENCY_CONTACTS', {})
+
+    phone_numbers = emergency_contacts.get('phone_numbers')
+    if phone_numbers and phone_numbers != "NONE":
+        sms_body = sms_emergency_contact_notification_message(full_name, verdict)
         for number in phone_numbers:
-            print(f"Attempting SMS to emergency contact: {number}")
             try:
-                sns_client.publish(
+                sns.publish(
                     PhoneNumber=number,
                     Message=sms_body,
                     MessageAttributes={
@@ -95,38 +111,30 @@ def emergency_contacts_notification(info, user_id):
                         }
                     }
                 )
-                print(f"SMS sent successfully to {number}")
+                logger.info(f"SMS sent successfully to {number}")
             except Exception as e:
-                print(f"Failed to send SMS to {number}: {e}")
-            
-    emails = emergency_contacts.get('EMAILS')
-    if emails != "NONE":
-        email_content = email_emergency_contact_notification_message(full_name, veredict)
+                logger.error(f"Failed to send SMS to {number}: {e}")
+    
+    emails = emergency_contacts.get('emails')
+    if emails and emails != "NONE":
+        email_content = email_emergency_contact_notification_message(full_name, verdict)
         for email in emails:
-            print(f"Attempting Email to emergency contact: {email}")
             try:
-                ses_client.send_email(
+                ses.send_email(
                     Source=SOURCE_EMAIL,
-                    Destination={
-                        'ToAddresses': [email]
-                    },
+                    Destination={'ToAddresses': [email]},
                     Message={
-                        'Subject': {
-                            'Data': email_content['subject']
-                        },
+                        'Subject': {'Data': email_content['subject']},
                         'Body': {
-                            'Text': {
-                                'Html': {'Data': email_content['html']},
-                                'Text': {'Data': email_content['text']}
-                            }
+                            'Html': {'Data': email_content['html']},
+                            'Text': {'Data': email_content['text']}
                         }
                     }
                 )
-                print(f"Email sent successfully to {email}")
+                logger.info(f"Email sent successfully to {email}")
             except Exception as e:
-                print(f"Failed to send Email to {email}: {e}")
+                logger.error(f"Failed to send Email to {email}: {e}")
 
-#  Lambda handler
 def lambda_handler(event, context):
     '''
     AWS Lambda handler to process SMS check notifications.
@@ -146,29 +154,28 @@ def lambda_handler(event, context):
             For any other errors during processing.
     '''
     try:
-        print("Received veredict. Starting the notification preparation.")
+        logger.info("Processing notification request.")
 
-        if not 'user_id' in event:
-            raise ValueError("User ID is required.")
-        user_id = event['user_id']
-        if not 'sender' in event:
-            raise ValueError("Sender is required.")
-        if not 'message' in event:
-            raise ValueError("Message content is required.")
-        if not 'veredict' in event:
-            raise ValueError("Veredict is required.")
-        if not 'reason' in event:
-            raise ValueError("Reason is required.")
-
-        file_key = user_notification(event, user_id)
-        print(f"Notification data stored in S3 at {file_key}.")
-
-        emergency_contacts_notification(event, user_id)
-        print("Emergency contacts notified.")
+        required = ['user_id', 'sender', 'message', 'verdict', 'reason']
+        missing = [f for f in required if f not in event]
+        if missing:
+            raise ValueError(f"Missing required fields in event: {', '.join(missing)}")
         
+        user_id = event['user_id']
+
+        path = store_notification_in_s3(event, user_id)
+        if event['verdict'] in [Verdict.SUSPICIOUS.value, Verdict.MALICIOUS.value]:
+            notify_emergency_contacts(event, user_id)
+
+        return {
+            "status": "success",
+            "s3_path": path,
+            "user_id": user_id
+        }
+
     except ValueError as ve:
-        print(f"ValueError: {ve}")
-        raise ve
+        logger.warning(f"Validation error: {ve}")
+        raise
     except Exception as e:
-        print(f"Error processing SMS: {e}")
-        raise e
+        logger.error(f"System failure: {e}", exc_info=True)
+        raise
