@@ -18,7 +18,7 @@ for var in REQUIRED_VARS:
         raise RuntimeError(f"Missing required environment variable: {var}")
 
 USERS_TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
-REGION_NAME = os.environ.get('REGION_NAME')
+REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 
 # Constants
 VALID_PREFERENCES = {
@@ -128,9 +128,15 @@ def dynamodb_update(user_id, updates):
         table.update_item(
             Key={'PK': user_id},
             UpdateExpression=f'SET {", ".join(update_parts)}',
-            ExpressionAttributeNames=attribute_names,
-            ExpressionAttributeValues=attribute_values,
-            ConditionExpression='attribute_exists(PK)'
+            ConditionExpression='attribute_exists(PK) AND #active = :true_val',
+            ExpressionAttributeNames={
+                '#active': 'ACTIVE',
+                **attribute_names
+            },
+            ExpressionAttributeValues={
+                ':true_val': True,
+                **attribute_values
+            }
         )
     except ClientError as e:
         if e.response['Error']['Code'] == 'ConditionalCheckFailedException':

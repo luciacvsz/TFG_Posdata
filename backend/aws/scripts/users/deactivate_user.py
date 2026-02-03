@@ -1,23 +1,51 @@
 import boto3
 import json
+import logging
 import os
-from common.database import check_user_exists
+from botocore.exceptions import ClientError
 from common.responses import create_response
 
+#Setup logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 # Environment variables
+REQUIRED_VARS = ['USERS_TABLE_NAME']
+for var in REQUIRED_VARS:
+    if not os.environ.get(var):
+        raise RuntimeError(f"Missing required environment variable: {var}")
+
 USERS_TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
-REGION_NAME = os.environ.get('REGION_NAME')
+REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 
-if not USERS_TABLE_NAME:
-    raise ValueError("USERS_TABLE_NAME environment variable not set")
-if not REGION_NAME:
-    raise ValueError("REGION_NAME environment variable not set")
-
-# Initialize DynamoDB resource and table
+# Initialize resources
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 users_table = dynamodb.Table(USERS_TABLE_NAME)
 
-#Auxiliary functions
+def validate_user_id(body):
+    '''
+    Validates the user id from the request body.
+
+    Parameters
+    ----------
+        body : dict
+            The request body containing user id.
+
+    Returns
+    -------
+        str
+            The user_id of the user to deactivate.
+
+    Raises
+    ------
+        ValueError
+            If any required field is missing or invalid.
+    '''
+    if 'user_id' not in body or not body['user_id']:
+        raise ValueError("Missing required field: user_id")
+
+    return body['user_id']
+
 def dynamodb_deactivation(user_id):
     '''
     Deactivate a user in the DynamoDB tables.
@@ -26,15 +54,34 @@ def dynamodb_deactivation(user_id):
     ----------
         user_id : str
             The primary key of the user.
-    '''
-    users_table.put_item(
-        Item={
-            'PK': user_id,
-            'ACTIVE': False
-        }
-    )
 
-# Lambda handler
+    Raises
+    ------
+        ValueError
+            If the user does not exist.
+        ClientError
+            If there is an error updating the item in DynamoDB.
+    '''
+    try:
+        users_table.update_item(
+            Key={
+                'PK': user_id
+            },
+            UpdateExpression="SET ACTIVE = :val",
+            ConditionExpression='attribute_exists(PK) AND #active = :true_val',
+            ExpressionAttributeNames={
+                '#active': 'ACTIVE'
+            }, 
+            ExpressionAttributeValues={
+                ':val': False,
+                ':true_val': True
+            },
+        )
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            raise ValueError(f"User with ID {user_id} does not exist.")
+        raise
+
 def lambda_handler(event, context):
     '''
     AWS Lambda handler to deactivate a user.
@@ -52,30 +99,23 @@ def lambda_handler(event, context):
             The response object.
     '''
     try:
-        print("Processing deactivate user request.")
+        logger.info(f"Received event: {json.dumps(event)}")
 
-        if 'body' in event:
-            if isinstance(event['body'], str):
-                try:
-                    body = json.loads(event['body'])
-                except json.JSONDecodeError:
-                    raise ValueError("Invalid JSON in body")
-            else:
-                body = event['body']
-        else:
-            body = {}
+        raw_body = event.get('body', '{}')
+        body = json.loads(raw_body) if isinstance(raw_body, str) else raw_body
+        if not body:
+            raise ValueError("Request body is required.")
         
-        user_id = body.get('user_id')
-        if not user_id or not check_user_exists(user_id, users_table):
-            raise ValueError("User ID is required and must exist.")
+        user_id = validate_user_id(body)
         
-        print(f"Deactivating user {user_id} in DynamoDB.")
         dynamodb_deactivation(user_id)
-        print(f"User {user_id} deactivated successfully.")
 
-        return create_response({'message': 'User deactivated successfully'})
+        logger.info(f"Successfully deactivated user: {user_id}")
+        return create_response({'user_id': user_id}, status_code=200)
     
     except ValueError as ve:
+        logger.warning(f"Validation error: {ve}")
         return create_response({'ValueError': str(ve)}, status_code=400)
     except Exception as e:
+        logger.error(f"System failure: {e}", exc_info=True)
         return create_response({'error': 'Internal server error'}, status_code=500)
