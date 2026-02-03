@@ -1,22 +1,93 @@
 import boto3
-import os
 import json
-from datetime import datetime
+import logging
+import os
+from botocore.exceptions import ClientError
+import common.preferences as preferences
 from common.responses import create_response
 from common.utils import create_user_id
-import common.preferences as preferences
 from common.validators import is_valid_phone, is_valid_email
+from datetime import datetime, timezone
+
+#Setup logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # Environment variables
-USERS_TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
-REGION_NAME = os.environ.get('REGION_NAME')
+REQUIRED_VARS = ['USERS_TABLE_NAME']
+for var in REQUIRED_VARS:
+    if not os.environ.get(var):
+        raise RuntimeError(f"Missing required environment variable: {var}")
 
-# Initialize DynamoDB resource and table
+USERS_TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
+REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
+
+# Constants
+VALID_PREFERENCES = {
+    'font_size': {e.value for e in preferences.FontSize},
+    'notification_sound': {e.value for e in preferences.NotificationSound},
+    'color_scheme': {e.value for e in preferences.ColorScheme},
+    'exhaustivity': {e.value for e in preferences.Exhaustivity},
+    'explanation_mode': {e.value for e in preferences.ExplanationMode}
+}
+
+# Initialize resources
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 table = dynamodb.Table(USERS_TABLE_NAME)
 
-#Auxiliary functions
-def dynamodb_insertion(user_id, full_name, contact, prefs, emergency_contacts):
+def validate_user_data(body):
+    '''
+    Validates the user data from the request body.
+
+    Parameters
+    ----------
+    body : dict
+        The request body containing user data.
+
+    Returns
+    -------
+    dict
+        The validated user data.
+
+    Raises
+    ------
+    ValueError
+        If any required field is missing or invalid.
+    '''
+    required_fields = ['full_name', 'contact', 'preferences', 'emergency_contacts']
+    for field in required_fields:
+        if field not in body:
+            raise ValueError(f"Missing required field: {field}")
+        
+    contact = body['contact']
+    if not all(c in contact for c in ['phone_number', 'email']):
+        raise ValueError("Contact must include phone number and email.")
+    
+    if contact['phone_number'] != 'NONE' and not is_valid_phone(contact['phone_number']):
+        raise ValueError("Phone number must be valid.")
+    
+    if contact['email'] != 'NONE' and not is_valid_email(contact['email']):
+        raise ValueError("Email must be valid.")
+    
+    prefs = body['preferences']
+    for key, valid_values in VALID_PREFERENCES.items():
+        if key not in prefs:
+            raise ValueError(f"Missing preference: {key}")
+        if prefs[key] not in valid_values:
+            raise ValueError(f"Invalid value for {key}: {prefs[key]}")
+        
+    emergency_contacts = body['emergency_contacts']
+    for list_key, validator in [('phone_numbers', is_valid_phone), ('emails', is_valid_email)]:
+        items = emergency_contacts.get(list_key)
+        if not items:
+            raise ValueError(f"Missing emergency contact list: {list_key}")
+        if items and items != 'NONE':
+            if not all(validator(item) for item in items):
+                raise ValueError(f"All {list_key} must be valid.")
+
+    return body
+
+def dynamodb_insertion(user_id, data):
     '''
     Insert a new user into the DynamoDB table.
 
@@ -24,28 +95,33 @@ def dynamodb_insertion(user_id, full_name, contact, prefs, emergency_contacts):
     ----------
         user_id : str
             The primary key of the user.
-        full_name : str
-            The full name of the user.
-        contact : dict
-            The contact information of the user.
-        prefs : dict
-            The preferences of the user.
-        emergency_contacts : list
-            List of emergency contacts.
-    '''
-    table.put_item(
-        Item={
-            'PK': user_id,
-            'ACTIVE': True,
-            'FULL_NAME': full_name,
-            'CONTACT': contact,
-            'PREFERENCES': prefs,
-            'EMERGENCY_CONTACTS': emergency_contacts,
-            'CREATED_AT': datetime.now().isoformat()
-        }
-    )
+        data : dict
+            The user data containing full_name, contact, preferences, and emergency_contacts.
 
-# Lambda handler
+    Raises
+    ------
+        ClientError
+            If there is an error inserting the item into DynamoDB.
+    '''
+    try:
+        table.put_item(
+            Item={
+                'PK': user_id,
+                'ACTIVE': True,
+                'FULL_NAME': data['full_name'],
+                'CONTACT': data['contact'],
+                'PREFERENCES': data['preferences'],
+                'EMERGENCY_CONTACTS': data['emergency_contacts'],
+                'CREATED_AT': datetime.now(timezone.utc).isoformat()
+            },
+            ConditionExpression='attribute_not_exists(PK)'
+        )
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            logger.error(f"User ID {user_id} already exists.")
+            raise ValueError("Internal ID generation conflict.")
+        raise
+
 def lambda_handler(event, context):
     '''
     AWS Lambda handler to create a new user.
@@ -63,73 +139,24 @@ def lambda_handler(event, context):
             The response object containing the new user ID or error message.
     '''
     try:
-        print("Processing create user request.")
+        logger.info(f"Received event: {json.dumps(event)}")
 
-        if 'body' in event:
-            if isinstance(event['body'], str):
-                try:
-                    body = json.loads(event['body'])
-                except json.JSONDecodeError:
-                    raise ValueError("Invalid JSON in body")
-            else:
-                body = event['body']
-        else:
-            body = {}
-
-        full_name = body.get('full_name')
-        if not full_name:
-            raise ValueError("Full name is required.")
-
-        contact = body.get('contact')
-        if not contact:
-            raise ValueError("Contact information is required.")
-        if not 'phone_number' in contact or not 'email' in contact:
-            raise ValueError("Contact must include phone number and email.")
-        if contact['phone_number'] != 'NONE' and not is_valid_phone(contact['phone_number']):
-            raise ValueError("Phone number must be valid.")
-        if contact['email'] != 'NONE' and not is_valid_email(contact['email']):
-            raise ValueError("Email must be valid.")
-        
-        prefs = body.get('preferences')
-        if not prefs:
-            raise ValueError("Preferences information is required.")
-        if not 'font_size' in prefs or not 'notification_sound' in prefs or not 'color_scheme' in prefs or not 'exhaustivity' in prefs or not 'explanation_mode' in prefs:
-            raise ValueError("All preferences must be provided.")
-        if prefs['font_size'] not in [e.value for e in preferences.FontSize]:
-            raise ValueError("Font size preference is invalid.")
-        if prefs['notification_sound'] not in [e.value for e in preferences.NotificationSound]:
-            raise ValueError("Notification sound preference is invalid.")
-        if prefs['color_scheme'] not in [e.value for e in preferences.ColorScheme]:
-            raise ValueError("Color scheme preference is invalid.")
-        if prefs['exhaustivity'] not in [e.value for e in preferences.Exhaustivity]:
-            raise ValueError("Exhaustivity preference is invalid.")
-        if prefs['explanation_mode'] not in [e.value for e in preferences.ExplanationMode]:
-            raise ValueError("Explanation mode preference is invalid.")
-        
-        emergency_contacts = body.get('emergency_contacts')
-        if not emergency_contacts:
-            raise ValueError("Emergency contacts information is required.")
-        if not 'phone_numbers' in emergency_contacts or not 'emails' in emergency_contacts:
-            raise ValueError("Emergency contacts must include phone numbers and emails.")
-        if emergency_contacts['phone_numbers'] != 'NONE':
-            for phone_number in emergency_contacts['phone_numbers']:
-                if not is_valid_phone(phone_number):
-                    raise ValueError("Emergency contact phone numbers must be valid.")
-        if emergency_contacts['emails'] != 'NONE':
-            for email in emergency_contacts['emails']:
-                if not is_valid_email(email):
-                    raise ValueError("Emergency contact emails must be valid.")
-
-        print("Creating new user ID.")
+        raw_body = event.get('body', {})
+        body = json.loads(raw_body) if isinstance(raw_body, str) else raw_body
+        if not body:
+            raise ValueError("Request body is missing.")
+    
+        validated_data = validate_user_data(body)
         user_id = create_user_id(table)
 
-        print(f"Inserting new user into DynamoDB.")
-        dynamodb_insertion(user_id, full_name, contact, prefs, emergency_contacts)
-        print(f"User {user_id} inserted successfully.")
+        dynamodb_insertion(user_id, validated_data)
 
-        return create_response({'user_id': user_id})
+        logger.info(f"Successfully created user ID: {user_id}")
+        return create_response({'user_id': user_id}, status_code=201)
     
     except ValueError as ve:
+        logger.warning(f"Validation error: {ve}")
         return create_response({'ValueError': str(ve)}, status_code=400)    
     except Exception as e:
+        logger.error(f"System failure: {e}", exc_info=True)
         return create_response({'error': 'Internal server error'}, status_code=500)

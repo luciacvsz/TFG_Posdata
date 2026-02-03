@@ -12,14 +12,13 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Environment variables
-# Environment variables
 REQUIRED_VARS = ['LISTS_TABLE_NAME']
 for var in REQUIRED_VARS:
     if not os.environ.get(var):
         raise RuntimeError(f"Missing required environment variable: {var}")
 
 LISTS_TABLE_NAME = os.environ.get('LISTS_TABLE_NAME') 
-REGION_NAME = os.environ.get('REGION_NAME')
+REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 
 # Constants
 PARTITION_KEY = 'BLACKLIST_HASH'
