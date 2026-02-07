@@ -30,39 +30,6 @@ dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 table = dynamodb.Table(LISTS_TABLE_NAME)
 sqs = boto3.client('sqs', region_name=REGION_NAME)
 
-def extract_and_validate_payload(event):
-    '''
-    Extracts and validates the payload from the event.
-
-    Parameters
-    ----------
-    event : dict
-        The event data containing SMS details.
-    
-    Returns
-    -------
-    dict
-        The validated payload with user_id, message, and sender.
-
-    Raises
-    ------
-    ValueError
-        If required fields are missing or invalid.
-    '''
-    raw_body = event.get('body')
-    body = json.loads(raw_body) if raw_body and isinstance(raw_body, str) else event
-
-    data = {
-        'user_id': body.get('user_id'),
-        'message': body.get('message'),
-        'sender': str(body.get('sender', UNKNOWN_SENDER)).strip()
-    }
-
-    if not data['user_id'] or not data['message']:
-        raise ValueError("Missing required fields: user_id or message.")
-    
-    return data
-
 def hash_check(message):
     '''
     Check if the SHA-512 hash of the message exists in the blacklist.
@@ -85,8 +52,6 @@ def hash_check(message):
             "details": hash_data.get('DESCRIPTION', '')
         }
     return None
-
-    
 
 def url_check(urls, message):
     '''
@@ -197,30 +162,34 @@ def lambda_handler(event, context):
     try:
 
         # 1. Parsing & validation
-        data = extract_and_validate_payload(event)
-        logger.info(f"Processing SMS check for user: {data['user_id']}") 
+        user_id = event.get('user_id')
+        message = event.get('message')
+        sender = str(event.get('sender', UNKNOWN_SENDER)).strip()
+        execution_id = event.get('execution_id', 'N/A')
+        logger.info(f"Processing SMS check for user: {user_id} | Execution ID: {execution_id}") 
                 
         response = { 
-            "user_id": data['user_id'],
-            "sender": data['sender'],
-            "message": data['message'],
+            "user_id": user_id,
+            "execution_id": execution_id,
+            "sender": sender,
+            "message": message,
             "verdict": Verdict.UNKNOWN.value,
             "reason": "Not found in any list",
         }
         
         # 2. Content Hash Check
-        if hash_result := hash_check(data['message']):
+        if hash_result := hash_check(message):
             response.update(hash_result)
             return response
 
         # 3. URL Analysis
-        urls = list(set(extract_urls(data['message'])))
-        if url_result := url_check(urls, data['message']):
+        urls = list(set(extract_urls(message)))
+        if url_result := url_check(urls, message):
             response.update(url_result)
             return response
 
         # 4. Sender Check
-        if sender_result := sender_check(data['sender']):
+        if sender_result := sender_check(sender):
             response.update(sender_result)
             return response
             

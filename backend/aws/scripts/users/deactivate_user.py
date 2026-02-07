@@ -22,30 +22,6 @@ REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 users_table = dynamodb.Table(USERS_TABLE_NAME)
 
-def validate_user_id(body):
-    '''
-    Validates the user id from the request body.
-
-    Parameters
-    ----------
-        body : dict
-            The request body containing user id.
-
-    Returns
-    -------
-        str
-            The user_id of the user to deactivate.
-
-    Raises
-    ------
-        ValueError
-            If any required field is missing or invalid.
-    '''
-    if 'user_id' not in body or not body['user_id']:
-        raise ValueError("Missing required field: user_id")
-
-    return body['user_id']
-
 def dynamodb_deactivation(user_id):
     '''
     Deactivate a user in the DynamoDB tables.
@@ -101,12 +77,11 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        raw_body = event.get('body', '{}')
-        body = json.loads(raw_body) if isinstance(raw_body, str) else raw_body
-        if not body:
-            raise ValueError("Request body is required.")
-        
-        user_id = validate_user_id(body)
+        query_params = event.get('queryStringParameters', {})
+        user_id = query_params.get('user_id') if query_params else None
+
+        if not user_id:
+            raise ValueError("Missing required query parameter: user_id")
         
         dynamodb_deactivation(user_id)
 

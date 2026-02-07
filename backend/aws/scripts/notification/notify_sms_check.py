@@ -30,7 +30,7 @@ users_table = dynamodb.Table(USERS_TABLE_NAME)
 sns = boto3.client('sns', region_name=REGION_NAME)
 ses = boto3.client('ses', region_name=REGION_NAME)
 
-def store_notification_in_s3(info, user_id):
+def store_notification_in_s3(info, user_id, execution_id):
     '''
     Stores the notification information in S3.
 
@@ -53,7 +53,7 @@ def store_notification_in_s3(info, user_id):
     '''
     now = datetime.now(timezone.utc)
     output_payload = {**info, 'processed_at': now.isoformat()}
-    file_key = f"notifications/{user_id}/{now.strftime('%Y/%m/%d/%H%M%S')}.json"
+    file_key = f"notifications/{user_id}/{execution_id}.json"
 
     try:
         s3.put_object(
@@ -156,19 +156,17 @@ def lambda_handler(event, context):
     try:
         logger.info("Processing notification request.")
 
-        required = ['user_id', 'sender', 'message', 'verdict', 'reason']
-        missing = [f for f in required if f not in event]
-        if missing:
-            raise ValueError(f"Missing required fields in event: {', '.join(missing)}")
-        
-        user_id = event['user_id']
+        user_id = event.get('user_id')
+        execution_id = event.get('execution_id')
+        verdict = event.get('verdict')
 
-        path = store_notification_in_s3(event, user_id)
-        if event['verdict'] in [Verdict.SUSPICIOUS.value, Verdict.MALICIOUS.value]:
+        path = store_notification_in_s3(event, user_id, execution_id)
+        if verdict in [Verdict.SUSPICIOUS.value, Verdict.MALICIOUS.value]:
             notify_emergency_contacts(event, user_id)
 
         return {
             "status": "success",
+            "execution_id": execution_id,
             "s3_path": path,
             "user_id": user_id
         }

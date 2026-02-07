@@ -53,16 +53,8 @@ def validate_user_data(body):
     ------
     ValueError
         If any required field is missing or invalid.
-    '''
-    required_fields = ['full_name', 'contact', 'preferences', 'emergency_contacts']
-    for field in required_fields:
-        if field not in body:
-            raise ValueError(f"Missing required field: {field}")
-        
+    '''        
     contact = body['contact']
-    if not all(c in contact for c in ['phone_number', 'email']):
-        raise ValueError("Contact must include phone number and email.")
-    
     if contact['phone_number'] != 'NONE' and not is_valid_phone(contact['phone_number']):
         raise ValueError("Phone number must be valid.")
     
@@ -72,17 +64,14 @@ def validate_user_data(body):
     prefs = body['preferences']
     for key, valid_values in VALID_PREFERENCES.items():
         if key not in prefs:
-            raise ValueError(f"Missing preference: {key}")
+            raise ValueError(f"Missing required preference: {key}")
         if prefs[key] not in valid_values:
             raise ValueError(f"Invalid value for {key}: {prefs[key]}")
         
     emergency_contacts = body['emergency_contacts']
     for list_key, validator in [('phone_numbers', is_valid_phone), ('emails', is_valid_email)]:
         items = emergency_contacts.get(list_key)
-        if not items:
-            raise ValueError(f"Missing emergency contact list: {list_key}")
-        if items and items != 'NONE':
-            if not all(validator(item) for item in items):
+        if not all(validator(item) for item in items):
                 raise ValueError(f"All {list_key} must be valid.")
 
     return body
@@ -141,8 +130,7 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        raw_body = event.get('body', {})
-        body = json.loads(raw_body) if isinstance(raw_body, str) else raw_body
+        body = json.loads(event.get('body', '{}'))
         if not body:
             raise ValueError("Request body is missing.")
     

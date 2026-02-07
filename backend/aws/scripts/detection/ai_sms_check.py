@@ -127,16 +127,13 @@ def lambda_handler(event, context):
     try:
         init_inference_engine()
 
-        body = event.get('body', event)
-        if isinstance(body, str):
-            body = json.loads(body)
-
-        text = body.get('message', '')
-        user_id = body.get('user_id', 'unknown')
+        text = event.get('message')
+        user_id = event.get('user_id')
 
         output_payload = {
             "user_id": user_id,
-            "sender": body.get('sender', ''),
+            "execution_id": event.get('execution_id'),
+            "sender": event.get('sender'),
             "message": text,
             "verdict": Verdict.UNKNOWN.value,
             "reason": "Unable to determine message safety"
