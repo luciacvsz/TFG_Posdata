@@ -92,8 +92,15 @@ def notify_trusted_contacts(info, user_id):
     verdict = info.get('verdict')
     trusted_contacts = user_info.get('TRUSTED_CONTACTS', {})
 
-    phone_numbers = trusted_contacts.get('phone_numbers')
-    if phone_numbers and phone_numbers != "NONE":
+    phone_numbers = []
+    emails = []
+    for contact in trusted_contacts:
+        if contact.get('phone_number') != "NONE":
+            phone_numbers.append(contact['phone_number'])
+        if contact.get('email') != "NONE":
+            emails.append(contact['email'])
+
+    if phone_numbers != []:
         sms_body = sms_trusted_contact_notification_message(full_name, verdict)
         for number in phone_numbers:
             try:
@@ -115,8 +122,7 @@ def notify_trusted_contacts(info, user_id):
             except Exception as e:
                 logger.error(f"Failed to send SMS to {number}: {e}")
     
-    emails = trusted_contacts.get('emails')
-    if emails and emails != "NONE":
+    if emails != []:
         email_content = email_trusted_contact_notification_message(full_name, verdict)
         for email in emails:
             try:
