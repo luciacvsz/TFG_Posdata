@@ -26,9 +26,9 @@ class ContactMethod(Enum):
     SMS = 'SMS'
     EMAIL = 'Email'
 
-def sms_emergency_contact_notification_message(full_name, verdict):
+def sms_trusted_contact_notification_message(full_name, verdict):
     '''
-    Generate an SMS notification message for emergency contacts.
+    Generate an SMS notification message for trusted contacts.
 
     Parameters
     ----------
@@ -51,9 +51,9 @@ def sms_emergency_contact_notification_message(full_name, verdict):
 
     return message
 
-def email_emergency_contact_notification_message(full_name, verdict):
+def email_trusted_contact_notification_message(full_name, verdict):
     '''
-    Generate an Email notification content (Subject and HTML Body) for emergency contacts.
+    Generate an Email notification content (Subject and HTML Body) for trusted contacts.
 
     Parameters
     ----------

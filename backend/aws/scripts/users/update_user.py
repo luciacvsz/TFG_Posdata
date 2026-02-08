@@ -71,13 +71,13 @@ def validate_user_data(body):
             if prefs[key] not in valid_values:
                 raise ValueError(f"Invalid value for {key}: {prefs[key]}")
             
-    if 'emergency_contacts' in body:
-        emergency_contacts = body['emergency_contacts']
-        for list_key, validator in [('phone_numbers', is_valid_phone), ('emails', is_valid_email)]:
-            items = emergency_contacts.get(list_key)
-            if not all(validator(item) for item in items):
-               raise ValueError(f"All {list_key} must be valid.")
-
+    if 'trusted_contacts' in body:
+        trusted_contacts = body['trusted_contacts']
+        for contact in trusted_contacts:
+            if contact['phone_number'] != 'NONE' and not is_valid_phone(contact['phone_number']):
+                raise ValueError("All phone numbers in trusted contacts must be valid.")
+            if contact['email'] != 'NONE' and not is_valid_email(contact['email']):
+                raise ValueError("All emails in trusted contacts must be valid.")
     return user_id, body
 
 def dynamodb_update(user_id, updates):
@@ -102,7 +102,7 @@ def dynamodb_update(user_id, updates):
     attribute_names = {}
     attribute_values = {}
 
-    allowed_fields = {'full_name', 'contact', 'preferences', 'emergency_contacts'}
+    allowed_fields = {'full_name', 'contact', 'preferences', 'trusted_contacts'}
     
     for key, value in updates.items():
         if key in allowed_fields and value is not None:

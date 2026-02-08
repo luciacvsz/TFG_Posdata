@@ -4,7 +4,7 @@ import logging
 import os
 from botocore.exceptions import ClientError
 from common.database import get_item_by_pk_sk
-from common.notification import sms_emergency_contact_notification_message, email_emergency_contact_notification_message, Verdict
+from common.notification import sms_trusted_contact_notification_message, email_trusted_contact_notification_message, Verdict
 from datetime import datetime, timezone
 
 # Setup logging
@@ -67,16 +67,16 @@ def store_notification_in_s3(info, user_id, execution_id):
         logger.error(f"Failed to store notification in S3 for user: {user_id}")
         raise
 
-def notify_emergency_contacts(info, user_id):
+def notify_trusted_contacts(info, user_id):
     '''
-    Notifies the emergency contacts of a user via SMS and email.
+    Notifies the trusted contacts of a user via SMS and email.
 
     Parameters
     ----------
     info : dict
         The notification information containing the verdict.
     user_id : str
-        The user ID whose emergency contacts will be notified.
+        The user ID whose trusted contacts will be notified.
 
     Raises
     ------
@@ -90,11 +90,11 @@ def notify_emergency_contacts(info, user_id):
     
     full_name = user_info.get('FULL_NAME', 'User')
     verdict = info.get('verdict')
-    emergency_contacts = user_info.get('EMERGENCY_CONTACTS', {})
+    trusted_contacts = user_info.get('TRUSTED_CONTACTS', {})
 
-    phone_numbers = emergency_contacts.get('phone_numbers')
+    phone_numbers = trusted_contacts.get('phone_numbers')
     if phone_numbers and phone_numbers != "NONE":
-        sms_body = sms_emergency_contact_notification_message(full_name, verdict)
+        sms_body = sms_trusted_contact_notification_message(full_name, verdict)
         for number in phone_numbers:
             try:
                 sns.publish(
@@ -115,9 +115,9 @@ def notify_emergency_contacts(info, user_id):
             except Exception as e:
                 logger.error(f"Failed to send SMS to {number}: {e}")
     
-    emails = emergency_contacts.get('emails')
+    emails = trusted_contacts.get('emails')
     if emails and emails != "NONE":
-        email_content = email_emergency_contact_notification_message(full_name, verdict)
+        email_content = email_trusted_contact_notification_message(full_name, verdict)
         for email in emails:
             try:
                 ses.send_email(
@@ -162,7 +162,7 @@ def lambda_handler(event, context):
 
         path = store_notification_in_s3(event, user_id, execution_id)
         if verdict in [Verdict.SUSPICIOUS.value, Verdict.MALICIOUS.value]:
-            notify_emergency_contacts(event, user_id)
+            notify_trusted_contacts(event, user_id)
 
         return {
             "status": "success",

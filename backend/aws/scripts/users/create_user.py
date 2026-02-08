@@ -68,11 +68,12 @@ def validate_user_data(body):
         if prefs[key] not in valid_values:
             raise ValueError(f"Invalid value for {key}: {prefs[key]}")
         
-    emergency_contacts = body['emergency_contacts']
-    for list_key, validator in [('phone_numbers', is_valid_phone), ('emails', is_valid_email)]:
-        items = emergency_contacts.get(list_key)
-        if not all(validator(item) for item in items):
-                raise ValueError(f"All {list_key} must be valid.")
+    trusted_contacts = body['trusted_contacts']
+    for contact in trusted_contacts:
+        if contact['phone_number'] != 'NONE' and not is_valid_phone(contact['phone_number']):
+            raise ValueError("All phone numbers in trusted contacts must be valid.")
+        if contact['email'] != 'NONE' and not is_valid_email(contact['email']):
+            raise ValueError("All emails in trusted contacts must be valid.")
 
     return body
 
@@ -85,7 +86,7 @@ def dynamodb_insertion(user_id, data):
         user_id : str
             The primary key of the user.
         data : dict
-            The user data containing full_name, contact, preferences, and emergency_contacts.
+            The user data containing full_name, contact, preferences, and trusted_contacts.
 
     Raises
     ------
@@ -100,7 +101,7 @@ def dynamodb_insertion(user_id, data):
                 'FULL_NAME': data['full_name'],
                 'CONTACT': data['contact'],
                 'PREFERENCES': data['preferences'],
-                'EMERGENCY_CONTACTS': data['emergency_contacts'],
+                'TRUSTED_CONTACTS': data.get('trusted_contacts', []),
                 'CREATED_AT': datetime.now(timezone.utc).isoformat()
             },
             ConditionExpression='attribute_not_exists(PK)'
