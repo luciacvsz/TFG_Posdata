@@ -44,8 +44,6 @@ def validate_user_data(body):
 
     Returns
     -------
-    str
-        The user_id of the user to update.
     dict
         The validated user data.
 
@@ -54,7 +52,6 @@ def validate_user_data(body):
     ValueError
         If any required field is missing or invalid.
     '''
-    user_id = body.pop('user_id')
 
     if'contact' in body:
         contact = body['contact']
@@ -78,7 +75,7 @@ def validate_user_data(body):
                 raise ValueError("All phone numbers in trusted contacts must be valid.")
             if contact['email'] != 'NONE' and not is_valid_email(contact['email']):
                 raise ValueError("All emails in trusted contacts must be valid.")
-    return user_id, body
+    return body
 
 def dynamodb_update(user_id, updates):
     '''
@@ -154,11 +151,17 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
+        query_params = event.get('queryStringparameters', {})
+        user_id = query_params.get('user_id') if query_params else None
+
+        if not user_id:
+            raise ValueError("Missing required query parameter: user_id")
+
         body = json.loads(event.get('body', '{}'))
         if not body:
             raise ValueError("Request body is required.")
 
-        user_id, updates = validate_user_data(body)
+        updates = validate_user_data(body)
         
         dynamodb_update(user_id, updates)        
 

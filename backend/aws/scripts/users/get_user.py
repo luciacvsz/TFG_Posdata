@@ -76,11 +76,10 @@ def lambda_handler(event, context):
         user = dynamodb_get(user_id)
 
         response = {
-            'user_id': user['PK'],
             'full_name': user['FULL_NAME'],
             'contact': user['CONTACT'],
             'preferences': user['PREFERENCES'],
-            'emergency_contacts': user['EMERGENCY_CONTACTS']
+            'trusted_contacts': user['TRUSTED_CONTACTS']
         }     
 
         logger.info(f"Successfully retrieved user ID: {user_id}")

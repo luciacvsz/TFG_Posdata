@@ -19,7 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.posdata.app.data.UserPreferences
+import com.posdata.app.data.LoginRepository
 import com.posdata.app.network.LoginRequest
 import com.posdata.app.network.RetrofitClient
 import com.posdata.app.ui.theme.*
@@ -27,24 +28,39 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen() {
+    // 1. ESTADO DE LA UI
+    // 'remember' guarda el valor aunque la pantalla se redibuje
+    // 'mutableStateOf' avisa a Compose para redibujar si el valor cambia
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var isPasswordVisible by remember { mutableStateOf(false) }
-
-    val scope = rememberCoroutineScope ()
-    val context = LocalContext.current
     var isLoading by remember { mutableStateOf(false) }
 
+    // 2. HERRAMIENTAS Y CONTEXTO
+    // Necesitamos un 'scope' para lanzar tareas en segundo plano (Corrutinas) al pulsar botones
+    val scope = rememberCoroutineScope ()
+    // El 'context' se necesita para mostrar los Toasts de Android
+    val context = LocalContext.current
+    val userPrefs = remember { UserPreferences(context) }
+    val repository = remember {
+        LoginRepository(
+            localApi = RetrofitClient.localInstance,
+            cloudApi = RetrofitClient.cloudInstance,
+            userPrefs = userPrefs
+        )
+    }
+
+    // 3. DISEÑO DE LA PANTALLA
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(35.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .fillMaxSize() // Ocupa toda la pantalla
+            .background(MaterialTheme.colorScheme.background) // Color de fondo del tema
+            .padding(35.dp), // Margen interno general
+        horizontalAlignment = Alignment.CenterHorizontally, // Centrar elementos horizontalmente
+        verticalArrangement = Arrangement.Center // Centrar elementos verticalmente
     ) {
 
-        //LOGO
+        // --- SECCIÓN: CABECERA ---
+
         Image(
             painter = painterResource(id = R.drawable.logo_posdata),
             contentDescription = "Logo Posdata",
@@ -52,7 +68,6 @@ fun LoginScreen() {
             contentScale = ContentScale.Fit
         )
 
-        //SYSTEM NAME
         Image(
             painter = painterResource(id = R.drawable.nombre_posdata),
             contentDescription = "Nombre Posdata",
@@ -62,7 +77,9 @@ fun LoginScreen() {
             contentScale = ContentScale.Fit
         )
 
-        //EMAIL
+        // --- SECCIÓN: FORMULARIO ---
+
+        // Input para el Email
         PosdataInput(
             label = "Correo Electrónico",
             placeholder = "tu@email.com",
@@ -72,7 +89,7 @@ fun LoginScreen() {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // PASSWORD
+        // Input para la Contraseña
         PosdataInput(
             label = "Contraseña",
             placeholder = "Ingresa tu contraseña",
@@ -83,35 +100,25 @@ fun LoginScreen() {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        //LOGIN
+        // --- SECCIÓN: BOTÓN DE LOGIN ---
         Button(
             onClick = {
+                // Primero, comprobamos que ningún campo esté vacío
                 if (email.isBlank() || password.isBlank()){
                     Toast.makeText(context, "Por favor, rellena todos los campos", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
 
+                // Iniciamos la carga
                 isLoading = true
 
+                // Hacemos la petición de red. Usamos 'scope.launch' porque Retrofit es una función 'suspend'
+                // y no se puede llamar directamente en el hilo principal de la UI
                 scope.launch {
-                    try {
-                        val request = LoginRequest(email, password)
-                        val response = RetrofitClient.instance.login(request)
+                    val result = repository.performLoginAndSync(email, password)
 
-                        isLoading = false
-
-                        if (response.isSuccessful && response.body()?.success == true) {
-                            val data = response.body()!!
-                            Toast.makeText(context, "¡Bienvenido!", Toast.LENGTH_LONG).show()
-                        } else {
-                            val errorMsg = response.body()?.message ?: "Error desconocido"
-                            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
-                        }
-                    } catch (e: Exception) {
-                        isLoading = false
-                        Toast.makeText(context, "No se puede conectar con el servidor.", Toast.LENGTH_LONG).show()
-                        e.printStackTrace()
-                    }
+                    result.onSuccess { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }.onFailure { error -> Toast.makeText(context, error.message, Toast.LENGTH_LONG).show() }
                 }
 
             },
@@ -146,7 +153,7 @@ fun LoginScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // FORGOTTEN PASSWORD
+        // --- SECCIÓN: OLVIDO DE CONTRASEÑA ---
         TextButton(onClick = { /* Recuperar */ }) {
             Text(
                 text = "¿Olvidaste tu contraseña?",
@@ -158,7 +165,7 @@ fun LoginScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // DIVIDE
+        // --- SECCIÓN: SEPARADOR 'O' ---
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
@@ -174,7 +181,7 @@ fun LoginScreen() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // REGISTER
+        // --- SECCIÓN: BOTÓN DE REGISTRO ---
         OutlinedButton(
             onClick = { /* Registro */ },
             modifier = Modifier
@@ -194,6 +201,7 @@ fun LoginScreen() {
     }
 }
 
+// 4. COMPONENTE REUTILIZABLE: INPUT DE TEXTO
 @Composable
 fun PosdataInput(
     label: String,

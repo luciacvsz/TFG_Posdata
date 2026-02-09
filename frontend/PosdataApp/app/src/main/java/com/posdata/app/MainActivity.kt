@@ -21,11 +21,6 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     LoginScreen()
-                    //RegisterScreen()
-                    //HomeScreen("Lucía", 30, 12)
-                    //ProfileScreen()
-                    //ContactsScreen()
-                    //SettingsScreen()
                 }
             }
         }
