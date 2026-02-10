@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         userData.isLoggedIn -> {
-                            HomeScreen(userData.fullName, 30, 2)
+                            MainScreen(userData = userData)
                         }
                         else -> {
                             LoginScreen()
