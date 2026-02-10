@@ -166,7 +166,7 @@ def lambda_handler(event, context):
         dynamodb_update(user_id, updates)        
 
         logger.info(f"Successfully updated user ID: {user_id}")
-        return create_response({'user_id': user_id}, status_code=200)
+        return create_response({}, status_code=200)
     
     except ValueError as ve:
         logger.warning(f"Validation error: {ve}")

@@ -54,7 +54,7 @@ data class TrustedContact(
 data class UserData(
     val isLoggedIn: Boolean,
     val userId: String,
-    val apiToken: String,
+    val sessionToken: String,
     val tokens: Int,
     val fullName: String,
     val contact: Contact,

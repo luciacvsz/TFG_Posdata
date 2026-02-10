@@ -19,9 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.posdata.app.data.UserPreferences
 import com.posdata.app.data.LoginRepository
-import com.posdata.app.network.LoginRequest
+import com.posdata.app.data.UserInfo
 import com.posdata.app.network.RetrofitClient
 import com.posdata.app.ui.theme.*
 import kotlinx.coroutines.launch
@@ -40,12 +39,12 @@ fun LoginScreen() {
     val scope = rememberCoroutineScope ()
     // El 'context' se necesita para mostrar los Toasts de Android
     val context = LocalContext.current
-    val userPrefs = remember { UserPreferences(context) }
+    val userInfo = remember { UserInfo(context) }
     val repository = remember {
         LoginRepository(
             localApi = RetrofitClient.localInstance,
             cloudApi = RetrofitClient.cloudInstance,
-            userPrefs = userPrefs
+            userInfo = userInfo
         )
     }
 

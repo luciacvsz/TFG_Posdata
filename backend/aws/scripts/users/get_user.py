@@ -74,12 +74,12 @@ def lambda_handler(event, context):
             raise ValueError("Missing required query parameter: user_id")
         
         user = dynamodb_get(user_id)
-
+    
         response = {
             'full_name': user['FULL_NAME'],
             'contact': user['CONTACT'],
             'preferences': user['PREFERENCES'],
-            'trusted_contacts': user['TRUSTED_CONTACTS']
+            'trusted_contacts': user['TRUSTED_CONTACTS'][0] if user.get('TRUSTED_CONTACTS') else []
         }     
 
         logger.info(f"Successfully retrieved user ID: {user_id}")

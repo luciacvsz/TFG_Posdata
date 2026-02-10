@@ -86,7 +86,7 @@ def lambda_handler(event, context):
         dynamodb_deactivation(user_id)
 
         logger.info(f"Successfully deactivated user: {user_id}")
-        return create_response({'user_id': user_id}, status_code=200)
+        return create_response({}, status_code=200)
     
     except ValueError as ve:
         logger.warning(f"Validation error: {ve}")
