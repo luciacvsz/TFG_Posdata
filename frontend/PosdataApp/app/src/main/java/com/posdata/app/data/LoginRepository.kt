@@ -3,28 +3,27 @@ package com.posdata.app.data
 import com.posdata.app.model.AppPreferences
 import com.posdata.app.model.Contact
 import com.posdata.app.network.ApiService
-import com.posdata.app.network.LoginGETRequest
+import com.posdata.app.network.login.LoginPOSTRequest
 
 class LoginRepository(
     private val localApi: ApiService,
     private val cloudApi: ApiService,
     private val userInfo: UserInfo
 ) {
-
     suspend fun performLoginAndSync(email: String, password: String): Result<String> {
         return try {
-            val loginResp = localApi.login(LoginGETRequest(email, password))
-            val loginData = loginResp.body()
+            val localResp = localApi.postLogin(LoginPOSTRequest(email, password))
+            val localData = localResp.body()
 
-            if (!loginResp.isSuccessful || loginData == null || !loginData.success) {
-                return Result.failure(Exception(loginData?.message ?: "Error en credenciales"))
+            if (!localResp.isSuccessful || localData == null || !localData.success) {
+                return Result.failure(Exception(localData?.message ?: "Error en credenciales"))
             }
 
-            val userId = loginData.userId
+            val userId = localData.userId
                 ?: return Result.failure(Exception("Login correcto pero sin ID de usuario"))
 
-            val sessionToken = loginData.sessionToken
-            val tokens = loginData.tokens
+            val sessionToken = localData.sessionToken
+            val tokens = localData.tokens
 
             val cloudData = try {
                 val cloudResp = cloudApi.getUser(userId)

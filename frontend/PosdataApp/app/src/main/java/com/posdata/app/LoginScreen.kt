@@ -26,7 +26,7 @@ import com.posdata.app.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
-fun LoginScreen() {
+fun LoginScreen(onRegisterClick: () -> Unit) {
     // 1. ESTADO DE LA UI
     // 'remember' guarda el valor aunque la pantalla se redibuje
     // 'mutableStateOf' avisa a Compose para redibujar si el valor cambia
@@ -182,7 +182,9 @@ fun LoginScreen() {
 
         // --- SECCIÓN: BOTÓN DE REGISTRO ---
         OutlinedButton(
-            onClick = { /* Registro */ },
+            onClick = {
+                onRegisterClick()
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),

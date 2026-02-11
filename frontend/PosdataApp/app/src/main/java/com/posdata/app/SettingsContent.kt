@@ -1,41 +1,76 @@
 package com.posdata.app
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.posdata.app.data.UserInfo
+import com.posdata.app.model.*
 import com.posdata.app.ui.theme.*
-import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsContent() {
-    var isLargeTextEnabled by remember { mutableStateOf(false) } // Apagado
-    var isSoundEnabled by remember { mutableStateOf(false) }     // Apagado
-    var isExplanationsEnabled by remember { mutableStateOf(true) } // Encendido (Azul)
-    var isExhaustiveModeEnabled by remember { mutableStateOf(true) } // Encendido (Azul)
+fun SettingsContent(
+    userData: UserData?
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val userInfo = remember { UserInfo(context) }
+
+    // Obtenemos las preferencias actuales
+    val prefs = userData?.preferences ?: AppPreferences()
+
+    // --- HELPER PARA GUARDAR ---
+    fun saveSettings(
+        fontSize: AppFontSize = prefs.fontSize,
+        sound: AppNotificationSound = prefs.notificationSound,
+        color: AppColorScheme = prefs.colorScheme,
+        exhaustivity: AppExhaustivity = prefs.exhaustivity,
+        explanation: AppExplanationMode = prefs.explanationMode
+    ) {
+        scope.launch {
+            userInfo.updateSettings(
+                fontSize = fontSize,
+                sound = sound,
+                color = color,
+                exhaustivity = exhaustivity,
+                explanation = explanation
+            )
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 36.dp) // Margen lateral estándar
+            .padding(horizontal = 36.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // 1. TÍTULO
         Text(
             text = "Ajustes",
-            style = MaterialTheme.typography.headlineLarge, // Sora Bold
+            style = MaterialTheme.typography.headlineLarge,
             color = PosdataBlackText,
             textAlign = TextAlign.Start,
             modifier = Modifier.fillMaxWidth()
@@ -43,46 +78,171 @@ fun SettingsContent() {
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        // 2. LISTA DE AJUSTES (Usando nuestro componente personalizado)
+        // --- SECCIÓN: APARIENCIA (NUEVA GRID DE 6 COLORES) ---
+        Text(
+            text = "Esquema de Color",
+            style = MaterialTheme.typography.titleSmall,
+            color = PosdataMutedText,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+        )
 
-        // Opción: Texto Grande
+        // FILA 1: Estándar, Alto Contraste, Protanopia
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            ColorOptionItem(
+                color = PosdataBlue, // Azul Estándar
+                label = "Estándar",
+                isSelected = prefs.colorScheme == AppColorScheme.STANDARD,
+                onClick = { saveSettings(color = AppColorScheme.STANDARD) }
+            )
+            ColorOptionItem(
+                color = Color.Black, // Negro
+                label = "Contraste",
+                isSelected = prefs.colorScheme == AppColorScheme.HIGH_CONTRAST,
+                onClick = { saveSettings(color = AppColorScheme.HIGH_CONTRAST) }
+            )
+            ColorOptionItem(
+                color = Color(0xFF8E44AD), // Violeta (distinguible para Protanopia)
+                label = "Protanopia",
+                isSelected = prefs.colorScheme == AppColorScheme.PROTANOPIA,
+                onClick = { saveSettings(color = AppColorScheme.PROTANOPIA) }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // FILA 2: Deuteranopia, Tritanopia, Acromatopsia
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            ColorOptionItem(
+                color = Color(0xFFD35400), // Naranja/Ocre (distinguible Deuteranopia)
+                label = "Deutera...", // Abreviado para que quepa visualmente
+                fullName = "Deuteranopia",
+                isSelected = prefs.colorScheme == AppColorScheme.DEUTERANOPIA,
+                onClick = { saveSettings(color = AppColorScheme.DEUTERANOPIA) }
+            )
+            ColorOptionItem(
+                color = Color(0xFF16A085), // Verde Azulado/Teal (distinguible Tritanopia)
+                label = "Tritanopia",
+                isSelected = prefs.colorScheme == AppColorScheme.TRITANOPIA,
+                onClick = { saveSettings(color = AppColorScheme.TRITANOPIA) }
+            )
+            ColorOptionItem(
+                color = Color.Gray, // Gris
+                label = "Acroma...",
+                fullName = "Acromatopsia",
+                isSelected = prefs.colorScheme == AppColorScheme.ACHROMATOPSIA,
+                onClick = { saveSettings(color = AppColorScheme.ACHROMATOPSIA) }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        HorizontalDivider(color = PosdataGreyBorder)
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // --- SECCIÓN: RESTO DE PREFERENCIAS ---
+
+        // 1. Texto Grande
         SettingsSwitch(
-            label = "Texto\nGrande", // \n para salto de línea
-            isChecked = isLargeTextEnabled,
-            onCheckedChange = { isLargeTextEnabled = it }
+            label = "Texto\nGrande",
+            isChecked = prefs.fontSize == AppFontSize.LARGE,
+            onCheckedChange = { isChecked ->
+                saveSettings(fontSize = if (isChecked) AppFontSize.LARGE else AppFontSize.REGULAR)
+            }
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Opción: Sonido
+        // 2. Sonido
         SettingsSwitch(
             label = "Sonido de\nNotificación",
-            isChecked = isSoundEnabled,
-            onCheckedChange = { isSoundEnabled = it }
+            isChecked = prefs.notificationSound == AppNotificationSound.ON,
+            onCheckedChange = { isChecked ->
+                saveSettings(sound = if (isChecked) AppNotificationSound.ON else AppNotificationSound.OFF)
+            }
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Opción: Explicaciones
+        // 3. Explicaciones
         SettingsSwitch(
-            label = "Explicaciones",
-            isChecked = isExplanationsEnabled,
-            onCheckedChange = { isExplanationsEnabled = it }
+            label = "Explicaciones\ndetalladas",
+            isChecked = prefs.explanationMode == AppExplanationMode.ON,
+            onCheckedChange = { isChecked ->
+                saveSettings(explanation = if (isChecked) AppExplanationMode.ON else AppExplanationMode.OFF)
+            }
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Opción: Modo Exhaustivo
+        // 4. Modo Exhaustivo
         SettingsSwitch(
-            label = "Modo\nExhaustivo",
-            isChecked = isExhaustiveModeEnabled,
-            onCheckedChange = { isExhaustiveModeEnabled = it }
+            label = "Análisis\nExhaustivo",
+            isChecked = prefs.exhaustivity == AppExhaustivity.ENHANCED,
+            onCheckedChange = { isChecked ->
+                saveSettings(exhaustivity = if (isChecked) AppExhaustivity.ENHANCED else AppExhaustivity.REGULAR)
+            }
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(50.dp))
     }
 }
 
+// --- COMPONENTE: OPCIÓN DE COLOR ---
+@Composable
+fun RowScope.ColorOptionItem( // RowScope permite usar Weight si fuera necesario
+    color: Color,
+    label: String,
+    fullName: String = label,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clickable { onClick() }
+            .weight(1f) // Esto asegura que las 3 opciones se repartan el ancho igual
+    ) {
+        Box(
+            modifier = Modifier
+                .size(50.dp) // Un poco más pequeñas para que quepan bien
+                .clip(CircleShape)
+                .background(color)
+                .border(
+                    width = if (isSelected) 3.dp else 0.dp,
+                    color = if (isSelected) PosdataBlue else Color.Transparent,
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Seleccionado",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall, // Texto más pequeño
+            fontSize = 12.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isSelected) PosdataBlackText else PosdataMutedText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+// --- COMPONENTE: INTERRUPTOR ---
 @Composable
 fun SettingsSwitch(
     label: String,
@@ -91,40 +251,30 @@ fun SettingsSwitch(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween, // Texto a izq, Switch a der
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Texto de la opción
         Text(
             text = label,
-            style = MaterialTheme.typography.titleMedium, // DM Sans Bold 20sp (ajustado en Type.kt)
-            fontSize = 20.sp, // Aseguramos tamaño grande
+            style = MaterialTheme.typography.titleMedium,
+            fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
             color = PosdataBlackText,
-            lineHeight = 26.sp // Para que no se peguen las líneas si hay salto
+            lineHeight = 26.sp
         )
 
-        // El Interruptor (Switch)
         Switch(
             checked = isChecked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                // ESTADO ENCENDIDO (ON)
                 checkedThumbColor = Color.White,
-                checkedTrackColor = PosdataLightBlue, // Tu azul clarito (o PosdataBlue)
+                checkedTrackColor = PosdataLightBlue,
                 checkedBorderColor = Color.Transparent,
-
-                // ESTADO APAGADO (OFF)
                 uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = PosdataMutedText, // Gris (relleno, no borde)
-                uncheckedBorderColor = Color.Transparent // Quitamos el borde para que parezca relleno
+                uncheckedTrackColor = PosdataMutedText,
+                uncheckedBorderColor = Color.Transparent
             ),
-            // Hacemos el switch un poco más grande visualmente si es necesario
             modifier = Modifier.scale(1.1f)
         )
     }
 }
-
-fun Modifier.scale(scale: Float): Modifier = this.then(
-    Modifier.graphicsLayer(scaleX = scale, scaleY = scale)
-)

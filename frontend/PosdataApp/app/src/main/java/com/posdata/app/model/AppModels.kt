@@ -47,8 +47,8 @@ data class AppPreferences(
 data class TrustedContact(
     @SerializedName("name") val name: String,
     @SerializedName("role") val role: String,
-    @SerializedName("phone_number") val phoneNumber: String,
-    @SerializedName("email") val email: String
+    @SerializedName("phone_number") val phoneNumber: String?,
+    @SerializedName("email") val email: String?
 )
 
 data class UserData(

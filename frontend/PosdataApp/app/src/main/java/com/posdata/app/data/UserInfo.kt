@@ -34,7 +34,7 @@ class UserInfo(private val context: Context) {
     }
 
     suspend fun saveUserSession(
-        userId: String,
+        userId: String?,
         sessionToken: String,
         tokens: Int,
         fullName: String,
@@ -46,7 +46,7 @@ class UserInfo(private val context: Context) {
 
         context.dataStore.edit { prefs ->
             prefs[IS_LOGGED_IN] = true
-            prefs[USER_ID] = userId
+            prefs[USER_ID] = userId as String
             prefs[SESSION_TOKEN] = sessionToken
             prefs[TOKENS] = tokens
 

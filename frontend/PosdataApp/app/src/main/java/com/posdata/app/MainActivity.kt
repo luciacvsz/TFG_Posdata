@@ -13,13 +13,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.posdata.app.data.UserInfo
 import com.posdata.app.ui.theme.PosdataAppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val userInfo = UserInfo(applicationContext)
 
         setContent {
@@ -27,10 +29,9 @@ class MainActivity : ComponentActivity() {
                 val userDataState = userInfo.userData.collectAsState(initial = null)
                 val userData = userDataState.value
 
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
+                val authNavController = rememberNavController()
+
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     when {
                         userData == null -> {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -41,7 +42,26 @@ class MainActivity : ComponentActivity() {
                             MainScreen(userData = userData)
                         }
                         else -> {
-                            LoginScreen()
+                            NavHost(
+                                navController = authNavController,
+                                startDestination = Screen.Login.route
+                            ) {
+                                composable(Screen.Login.route) {
+                                    LoginScreen(
+                                        onRegisterClick = {
+                                            authNavController.navigate(Screen.Register.route)
+                                        }
+                                    )
+                                }
+
+                                composable(Screen.Register.route) {
+                                    RegisterScreen(
+                                        onBackClick = {
+                                            authNavController.popBackStack()
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }

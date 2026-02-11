@@ -1,5 +1,6 @@
 package com.posdata.app
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -23,16 +25,34 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.posdata.app.data.LoginRepository
+import com.posdata.app.data.RegisterRepository
+import com.posdata.app.data.UserInfo
+import com.posdata.app.network.RetrofitClient
 import com.posdata.app.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen() {
+fun RegisterScreen(onBackClick: () -> Unit) {
     // Estados para guardar lo que escribe el usuario
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope ()
+    // El 'context' se necesita para mostrar los Toasts de Android
+    val context = LocalContext.current
+    val userInfo = remember { UserInfo(context) }
+    val repository = remember {
+        RegisterRepository(
+            localApi = RetrofitClient.localInstance,
+            cloudApi = RetrofitClient.cloudInstance,
+            userInfo = userInfo
+        )
+    }
 
     // Estado del scroll (VITAL para pantallas con teclado abierto)
     val scrollState = rememberScrollState()
@@ -43,7 +63,9 @@ fun RegisterScreen() {
                 title = {},
                 navigationIcon = {
                     IconButton(
-                        onClick = { /* Volver al Login */ },
+                        onClick = {
+                            onBackClick()
+                        },
                         modifier = Modifier.size(70.dp) // Área de toque grande
                     ) {
                         Icon(
@@ -135,7 +157,17 @@ fun RegisterScreen() {
 
             // 7. BOTÓN DE REGISTRO (Con Degradado)
             Button(
-                onClick = { /* Lógica de Registro */ },
+                onClick = {
+
+                    isLoading = true
+
+                    scope.launch {
+                        val result = repository.performRegistration(name, email, phone, password)
+
+                        result.onSuccess { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        }.onFailure { error -> Toast.makeText(context, error.message, Toast.LENGTH_LONG).show() }
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),

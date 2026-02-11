@@ -19,7 +19,7 @@ import com.posdata.app.ui.theme.*
 
 @Composable
 fun HomeContent(
-    userName: String,
+    fullName: String,
     analyzedSms: Int,
     fraudSms: Int
 ) {
@@ -38,7 +38,7 @@ fun HomeContent(
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = "¡Hola, $userName!",
+                text = "¡Hola, $fullName!",
                 style = MaterialTheme.typography.headlineLarge,
                 color = PosdataBlackText,
                 textAlign = TextAlign.Start,

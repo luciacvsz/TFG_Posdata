@@ -44,7 +44,7 @@ fun MainScreen(userData: UserData?) {
         ) {
             composable(Screen.Home.route) {
                 HomeContent(
-                    userName = userData?.fullName ?: "Usuario",
+                    fullName = userData?.fullName ?: "Usuario",
                     analyzedSms = 124,
                     fraudSms = 3
                 )
@@ -52,18 +52,20 @@ fun MainScreen(userData: UserData?) {
 
             composable(Screen.Profile.route) {
                 ProfileContent(
-                    userName = userData?.fullName ?: "Juan Pérez",
-                    userEmail = userData?.contact?.email ?: "email@test.com",
-                    userPhone = userData?.contact?.phoneNumber ?: "+34..."
+                    userData = userData
                 )
             }
 
             composable(Screen.Contacts.route) {
-                ContactsContent()
+                ContactsContent(
+                    userData = userData
+                )
             }
 
             composable(Screen.Settings.route) {
-                SettingsContent()
+                SettingsContent(
+                    userData = userData
+                )
             }
         }
     }
@@ -98,7 +100,6 @@ fun PosdataMainBottomBar(navController: NavController) {
             )
         )
 
-        // --- PERFIL ---
         NavigationBarItem(
             selected = currentRoute == Screen.Profile.route,
             onClick = {
