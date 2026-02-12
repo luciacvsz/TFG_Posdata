@@ -8,16 +8,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.posdata.app.data.UserInfo
+import com.posdata.app.data.local.UserInfo
 import com.posdata.app.ui.theme.PosdataAppTheme
+import com.posdata.app.ui.screens.login.LoginScreen
+import com.posdata.app.ui.screens.home.MainScreen
+import com.posdata.app.ui.screens.register.RegisterScreen
+import com.posdata.app.ui.navigation.Screen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

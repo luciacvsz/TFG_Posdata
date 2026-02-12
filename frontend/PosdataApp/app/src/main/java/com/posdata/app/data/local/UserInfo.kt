@@ -1,0 +1,158 @@
+package com.posdata.app.data.local
+
+import android.content.Context
+import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.preferencesDataStore
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.posdata.app.model.* import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+val Context.dataStore by preferencesDataStore(name = "posdata_settings")
+
+class UserInfo(private val context: Context) {
+
+    private val gson = Gson()
+
+    companion object {
+        val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
+        val USER_ID = stringPreferencesKey("user_id")
+        val SESSION_TOKEN = stringPreferencesKey("session_token")
+        val TOKENS = intPreferencesKey("tokens")
+
+        val FULL_NAME = stringPreferencesKey("full_name")
+        val PHONE_NUMBER = stringPreferencesKey("phone_number")
+        val EMAIL = stringPreferencesKey("email")
+
+        val PREF_FONT_SIZE = stringPreferencesKey("font_size")
+        val PREF_SOUND = stringPreferencesKey("notification_sound")
+        val PREF_COLOR = stringPreferencesKey("color_scheme")
+        val PREF_EXHAUSTIVITY = stringPreferencesKey("exhaustivity")
+        val PREF_EXPLANATION = stringPreferencesKey("explanation")
+
+        val TRUSTED_CONTACTS_JSON = stringPreferencesKey("trusted_contacts_json")
+    }
+
+    suspend fun saveUserSession(
+        userId: String?,
+        sessionToken: String,
+        tokens: Int,
+        fullName: String,
+        contact: Contact,
+        preferences: AppPreferences,
+        trustedContacts: List<TrustedContact>
+    ) {
+        val trustedContactsJson = gson.toJson(trustedContacts)
+
+        context.dataStore.edit { prefs ->
+            prefs[IS_LOGGED_IN] = true
+            prefs[USER_ID] = userId as String
+            prefs[SESSION_TOKEN] = sessionToken
+            prefs[TOKENS] = tokens
+
+            prefs[FULL_NAME] = fullName
+            prefs[PHONE_NUMBER] = contact.phoneNumber
+            prefs[EMAIL] = contact.email
+
+            prefs[PREF_FONT_SIZE] = preferences.fontSize.name
+            prefs[PREF_SOUND] = preferences.notificationSound.name
+            prefs[PREF_COLOR] = preferences.colorScheme.name
+            prefs[PREF_EXHAUSTIVITY] = preferences.exhaustivity.name
+            prefs[PREF_EXPLANATION] = preferences.explanationMode.name
+
+            prefs[TRUSTED_CONTACTS_JSON] = trustedContactsJson
+        }
+    }
+
+    suspend fun updateProfile(
+        fullName: String? = null,
+        phoneNumber: String? = null,
+        email: String? = null,
+    ) {
+        context.dataStore.edit { prefs ->
+            if (fullName != null) prefs[FULL_NAME] = fullName
+            if (phoneNumber != null) prefs[PHONE_NUMBER] = phoneNumber
+            if (email != null) prefs[EMAIL] = email
+        }
+    }
+
+    suspend fun updateTrustedContacts(
+        trustedContacts: List<TrustedContact>
+    ) {
+        val json = gson.toJson(trustedContacts)
+        context.dataStore.edit { prefs ->
+            prefs[TRUSTED_CONTACTS_JSON] = json
+        }
+    }
+
+    suspend fun updatePreferences(
+        fontSize: AppFontSize? = null,
+        sound: AppNotificationSound? = null,
+        color: AppColorScheme? = null,
+        exhaustivity: AppExhaustivity? = null,
+        explanation: AppExplanationMode? = null
+    ) {
+        context.dataStore.edit { prefs ->
+            if (fontSize != null) prefs[PREF_FONT_SIZE] = fontSize.name
+            if (sound != null) prefs[PREF_SOUND] = sound.name
+            if (color != null) prefs[PREF_COLOR] = color.name
+            if (exhaustivity != null) prefs[PREF_EXHAUSTIVITY] = exhaustivity.name
+            if (explanation != null) prefs[PREF_EXPLANATION] = explanation.name
+        }
+    }
+
+    suspend fun tryConsumeToken(): Boolean {
+        var success = false
+        context.dataStore.edit { prefs ->
+            val current = prefs[TOKENS] ?: 0
+            if (current > 0) {
+                prefs[TOKENS] = current - 1
+                success = true
+            }
+        }
+        return success
+    }
+
+    suspend fun clearSession() {
+        context.dataStore.edit { it.clear() }
+    }
+
+    val userData: Flow<UserData> = context.dataStore.data.map { prefs ->
+
+        val contact = Contact(
+            phoneNumber = prefs[PHONE_NUMBER] ?: "",
+            email = prefs[EMAIL] ?: ""
+        )
+
+        val preferences = AppPreferences(
+            fontSize = enumValueOfOrNull<AppFontSize>(prefs[PREF_FONT_SIZE]) ?: AppFontSize.REGULAR,
+            notificationSound = enumValueOfOrNull<AppNotificationSound>(prefs[PREF_SOUND]) ?: AppNotificationSound.ON,
+            colorScheme = enumValueOfOrNull<AppColorScheme>(prefs[PREF_COLOR]) ?: AppColorScheme.STANDARD,
+            exhaustivity = enumValueOfOrNull<AppExhaustivity>(prefs[PREF_EXHAUSTIVITY]) ?: AppExhaustivity.REGULAR,
+            explanationMode = enumValueOfOrNull<AppExplanationMode>(prefs[PREF_EXPLANATION]) ?: AppExplanationMode.ON
+        )
+
+        val jsonTrustedContacts = prefs[TRUSTED_CONTACTS_JSON] ?: "[]"
+        val typeToken = object : TypeToken<List<TrustedContact>>() {}.type
+        val trustedContacts: List<TrustedContact> = try {
+            gson.fromJson(jsonTrustedContacts, typeToken) ?: emptyList()
+        } catch (e: Exception) { emptyList() }
+
+        UserData(
+            isLoggedIn = prefs[IS_LOGGED_IN] ?: false,
+            userId = prefs[USER_ID] ?: "",
+            sessionToken = prefs[SESSION_TOKEN] ?: "",
+            tokens = prefs[TOKENS] ?: 0,
+            fullName = prefs[FULL_NAME] ?: "",
+            contact = contact,
+            preferences = preferences,
+            trustedContacts = trustedContacts
+        )
+    }
+
+    private inline fun <reified T : Enum<T>> enumValueOfOrNull(name: String?): T? {
+        return try {
+            if (name != null) enumValueOf<T>(name) else null
+        } catch (e: Exception) { null }
+    }
+}

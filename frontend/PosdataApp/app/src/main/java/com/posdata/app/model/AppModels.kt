@@ -50,14 +50,3 @@ data class TrustedContact(
     @SerializedName("phone_number") val phoneNumber: String?,
     @SerializedName("email") val email: String?
 )
-
-data class UserData(
-    val isLoggedIn: Boolean,
-    val userId: String,
-    val sessionToken: String,
-    val tokens: Int,
-    val fullName: String,
-    val contact: Contact,
-    val preferences: AppPreferences,
-    val trustedContacts: List<com.posdata.app.model.TrustedContact>
-)
