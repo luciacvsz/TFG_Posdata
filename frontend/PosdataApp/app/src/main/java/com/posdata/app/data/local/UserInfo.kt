@@ -24,11 +24,11 @@ class UserInfo(private val context: Context) {
         val PHONE_NUMBER = stringPreferencesKey("phone_number")
         val EMAIL = stringPreferencesKey("email")
 
+        val PREF_COLOR_SCHEME = stringPreferencesKey("color_scheme")
         val PREF_FONT_SIZE = stringPreferencesKey("font_size")
-        val PREF_SOUND = stringPreferencesKey("notification_sound")
-        val PREF_COLOR = stringPreferencesKey("color_scheme")
+        val PREF_NOTIFICATION_SOUND = stringPreferencesKey("notification_sound")
         val PREF_EXHAUSTIVITY = stringPreferencesKey("exhaustivity")
-        val PREF_EXPLANATION = stringPreferencesKey("explanation")
+        val PREF_EXPLANATION_MODE = stringPreferencesKey("explanation")
 
         val TRUSTED_CONTACTS_JSON = stringPreferencesKey("trusted_contacts_json")
     }
@@ -54,11 +54,11 @@ class UserInfo(private val context: Context) {
             prefs[PHONE_NUMBER] = contact.phoneNumber
             prefs[EMAIL] = contact.email
 
+            prefs[PREF_COLOR_SCHEME] = preferences.colorScheme.name
             prefs[PREF_FONT_SIZE] = preferences.fontSize.name
-            prefs[PREF_SOUND] = preferences.notificationSound.name
-            prefs[PREF_COLOR] = preferences.colorScheme.name
+            prefs[PREF_NOTIFICATION_SOUND] = preferences.notificationSound.name
             prefs[PREF_EXHAUSTIVITY] = preferences.exhaustivity.name
-            prefs[PREF_EXPLANATION] = preferences.explanationMode.name
+            prefs[PREF_EXPLANATION_MODE] = preferences.explanationMode.name
 
             prefs[TRUSTED_CONTACTS_JSON] = trustedContactsJson
         }
@@ -86,18 +86,18 @@ class UserInfo(private val context: Context) {
     }
 
     suspend fun updatePreferences(
+        colorScheme: AppColorScheme? = null,
         fontSize: AppFontSize? = null,
-        sound: AppNotificationSound? = null,
-        color: AppColorScheme? = null,
+        notificationSound: AppNotificationSound? = null,
         exhaustivity: AppExhaustivity? = null,
-        explanation: AppExplanationMode? = null
+        explanationMode: AppExplanationMode? = null
     ) {
         context.dataStore.edit { prefs ->
+            if (colorScheme != null) prefs[PREF_COLOR_SCHEME] = colorScheme.name
             if (fontSize != null) prefs[PREF_FONT_SIZE] = fontSize.name
-            if (sound != null) prefs[PREF_SOUND] = sound.name
-            if (color != null) prefs[PREF_COLOR] = color.name
+            if (notificationSound != null) prefs[PREF_NOTIFICATION_SOUND] = notificationSound.name
             if (exhaustivity != null) prefs[PREF_EXHAUSTIVITY] = exhaustivity.name
-            if (explanation != null) prefs[PREF_EXPLANATION] = explanation.name
+            if (explanationMode != null) prefs[PREF_EXPLANATION_MODE] = explanationMode.name
         }
     }
 
@@ -125,11 +125,11 @@ class UserInfo(private val context: Context) {
         )
 
         val preferences = AppPreferences(
+            colorScheme = enumValueOfOrNull<AppColorScheme>(prefs[PREF_COLOR_SCHEME]) ?: AppColorScheme.STANDARD,
             fontSize = enumValueOfOrNull<AppFontSize>(prefs[PREF_FONT_SIZE]) ?: AppFontSize.REGULAR,
-            notificationSound = enumValueOfOrNull<AppNotificationSound>(prefs[PREF_SOUND]) ?: AppNotificationSound.ON,
-            colorScheme = enumValueOfOrNull<AppColorScheme>(prefs[PREF_COLOR]) ?: AppColorScheme.STANDARD,
+            notificationSound = enumValueOfOrNull<AppNotificationSound>(prefs[PREF_NOTIFICATION_SOUND]) ?: AppNotificationSound.ON,
             exhaustivity = enumValueOfOrNull<AppExhaustivity>(prefs[PREF_EXHAUSTIVITY]) ?: AppExhaustivity.REGULAR,
-            explanationMode = enumValueOfOrNull<AppExplanationMode>(prefs[PREF_EXPLANATION]) ?: AppExplanationMode.ON
+            explanationMode = enumValueOfOrNull<AppExplanationMode>(prefs[PREF_EXPLANATION_MODE]) ?: AppExplanationMode.ON
         )
 
         val jsonTrustedContacts = prefs[TRUSTED_CONTACTS_JSON] ?: "[]"

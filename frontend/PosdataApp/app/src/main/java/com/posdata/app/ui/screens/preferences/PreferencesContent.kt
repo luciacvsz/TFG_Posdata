@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,19 +23,54 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.posdata.app.model.*
+import com.posdata.app.ui.components.PosdataColorOptionSwitch
+import com.posdata.app.ui.components.PosdataPreferenceSwitch
+import com.posdata.app.ui.components.PosdataStatusDialog
+import com.posdata.app.ui.screens.profile.ProfileUiState
+import com.posdata.app.ui.screens.trusted_contacts.TrustedContactsUiState
 import com.posdata.app.ui.theme.*
 
 @Composable
 fun PreferencesContent(
     userData: UserData?,
     viewModel: PreferencesViewModel = viewModel(
-        factory = SettingsViewModelFactory(LocalContext.current)
+        factory = PreferencesViewModelFactory(LocalContext.current)
     )
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val preferences = userData?.preferences ?: AppPreferences()
+    val isLoading = uiState is PreferencesUiState.Loading
 
-    val prefs = userData?.preferences ?: AppPreferences()
+    if (uiState is PreferencesUiState.Loading) {
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).zIndex(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = Color.White)
+        }
+    }
+
+    when (val state = uiState) {
+        is PreferencesUiState.Success -> {
+            PosdataStatusDialog(
+                message = state.message,
+                isSuccess = true,
+                onDismiss = { viewModel.resetState() }
+            )
+        }
+        is PreferencesUiState.Error -> {
+            PosdataStatusDialog(
+                message = state.message,
+                isSuccess = false,
+                onDismiss = { viewModel.resetState() }
+            )
+        }
+        else -> {}
+    }
 
     Column(
         modifier = Modifier
@@ -43,11 +79,10 @@ fun PreferencesContent(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Ajustes",
+            text = "Preferencias",
             style = MaterialTheme.typography.headlineLarge,
             color = PosdataBlackText,
             textAlign = TextAlign.Start,
@@ -67,49 +102,48 @@ fun PreferencesContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            ColorOptionItem(
-                color = PosdataBlue, // Azul Estándar
+            PosdataColorOptionSwitch(
+                color = PosdataBlue,
                 label = "Estándar",
-                isSelected = prefs.colorScheme == AppColorScheme.STANDARD,
+                isSelected = preferences.colorScheme == AppColorScheme.STANDARD,
                 onClick = { viewModel.updateColorScheme(AppColorScheme.STANDARD) }
             )
-            ColorOptionItem(
-                color = Color.Black, // Negro
+            PosdataColorOptionSwitch(
+                color = Color.Black,
                 label = "Contraste",
-                isSelected = prefs.colorScheme == AppColorScheme.HIGH_CONTRAST,
+                isSelected = preferences.colorScheme == AppColorScheme.HIGH_CONTRAST,
                 onClick = { viewModel.updateColorScheme(AppColorScheme.HIGH_CONTRAST) }
             )
-            ColorOptionItem(
+            PosdataColorOptionSwitch(
                 color = Color(0xFF8E44AD), // Violeta (distinguible para Protanopia)
                 label = "Protanopia",
-                isSelected = prefs.colorScheme == AppColorScheme.PROTANOPIA,
+                isSelected = preferences.colorScheme == AppColorScheme.PROTANOPIA,
                 onClick = { viewModel.updateColorScheme(AppColorScheme.PROTANOPIA) }
             )
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // FILA 2: Deuteranopia, Tritanopia, Acromatopsia
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            ColorOptionItem(
-                color = Color(0xFFD35400), // Naranja/Ocre (distinguible Deuteranopia)
-                label = "Deutera...", // Abreviado para que quepa visualmente
-                isSelected = prefs.colorScheme == AppColorScheme.DEUTERANOPIA,
+            PosdataColorOptionSwitch(
+                color = Color(0xFFD35400),
+                label = "Deutera...",
+                isSelected = preferences.colorScheme == AppColorScheme.DEUTERANOPIA,
                 onClick = { viewModel.updateColorScheme(AppColorScheme.DEUTERANOPIA) }
             )
-            ColorOptionItem(
-                color = Color(0xFF16A085), // Verde Azulado/Teal (distinguible Tritanopia)
+            PosdataColorOptionSwitch(
+                color = Color(0xFF16A085),
                 label = "Tritanopia",
-                isSelected = prefs.colorScheme == AppColorScheme.TRITANOPIA,
+                isSelected = preferences.colorScheme == AppColorScheme.TRITANOPIA,
                 onClick = { viewModel.updateColorScheme(AppColorScheme.TRITANOPIA) }
             )
-            ColorOptionItem(
-                color = Color.Gray, // Gris
+            PosdataColorOptionSwitch(
+                color = Color.Gray,
                 label = "Acroma...",
-                isSelected = prefs.colorScheme == AppColorScheme.ACHROMATOPSIA,
+                isSelected = preferences.colorScheme == AppColorScheme.ACHROMATOPSIA,
                 onClick = { viewModel.updateColorScheme(AppColorScheme.ACHROMATOPSIA) }
             )
         }
@@ -119,12 +153,9 @@ fun PreferencesContent(
         HorizontalDivider(color = PosdataGreyBorder)
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- SECCIÓN: RESTO DE PREFERENCIAS ---
-
-        // 1. Texto Grande
-        SettingsSwitch(
+        PosdataPreferenceSwitch(
             label = "Texto\nGrande",
-            isChecked = prefs.fontSize == AppFontSize.LARGE,
+            isChecked = preferences.fontSize == AppFontSize.LARGE,
             onCheckedChange = { isChecked ->
                viewModel.updateFontSize(isChecked)
             }
@@ -132,10 +163,9 @@ fun PreferencesContent(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // 2. Sonido
-        SettingsSwitch(
+        PosdataPreferenceSwitch(
             label = "Sonido de\nNotificación",
-            isChecked = prefs.notificationSound == AppNotificationSound.ON,
+            isChecked = preferences.notificationSound == AppNotificationSound.ON,
             onCheckedChange = { isChecked ->
                 viewModel.updateNotificationSound(isChecked)
             }
@@ -143,20 +173,18 @@ fun PreferencesContent(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // 3. Explicaciones
-        SettingsSwitch(
+        PosdataPreferenceSwitch(
             label = "Explicaciones\ndetalladas",
-            isChecked = prefs.explanationMode == AppExplanationMode.ON,
+            isChecked = preferences.explanationMode == AppExplanationMode.ON,
             onCheckedChange = { isChecked ->
                 viewModel.updateExplanationMode(isChecked)            }
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // 4. Modo Exhaustivo
-        SettingsSwitch(
+        PosdataPreferenceSwitch(
             label = "Análisis\nExhaustivo",
-            isChecked = prefs.exhaustivity == AppExhaustivity.ENHANCED,
+            isChecked = preferences.exhaustivity == AppExhaustivity.ENHANCED,
             onCheckedChange = { isChecked ->
                 viewModel.updateExhaustivity(isChecked)
             }
@@ -166,85 +194,3 @@ fun PreferencesContent(
     }
 }
 
-@Composable
-fun RowScope.ColorOptionItem(
-    color: Color,
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clickable { onClick() }
-            .weight(1f)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)
-                .background(color)
-                .border(
-                    width = if (isSelected) 3.dp else 0.dp,
-                    color = if (isSelected) PosdataBlue else Color.Transparent,
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isSelected) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Seleccionado",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodySmall,
-            fontSize = 12.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) PosdataBlackText else PosdataMutedText,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
-fun SettingsSwitch(
-    label: String,
-    isChecked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = PosdataBlackText,
-            lineHeight = 26.sp
-        )
-
-        Switch(
-            checked = isChecked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = PosdataLightBlue,
-                checkedBorderColor = Color.Transparent,
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = PosdataMutedText,
-                uncheckedBorderColor = Color.Transparent
-            ),
-            modifier = Modifier.scale(1.1f)
-        )
-    }
-}

@@ -6,48 +6,132 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.posdata.app.data.local.UserInfo
 import com.posdata.app.data.remote.RetrofitClient
-import com.posdata.app.data.repository.UserRepository
+import com.posdata.app.data.repository.UserUpdateRepository
 import com.posdata.app.model.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class PreferencesViewModel(private val repository: UserRepository) : ViewModel() {
+sealed class PreferencesUiState {
+    object Idle : PreferencesUiState()
+    object Loading : PreferencesUiState()
+    data class Success(val message: String) : PreferencesUiState()
+    data class Error(val message: String) : PreferencesUiState()
+}
 
-    fun updateColorScheme(newColor: AppColorScheme) {
+class PreferencesViewModel(
+    private val repository: UserUpdateRepository) : ViewModel() {
+
+    private val _uiState = MutableStateFlow<PreferencesUiState>(PreferencesUiState.Idle)
+    val uiState: StateFlow<PreferencesUiState> = _uiState.asStateFlow()
+
+
+    fun updateColorScheme(colorScheme: AppColorScheme) {
         viewModelScope.launch {
-            repository.updateSettings(color = newColor)
+            _uiState.value = PreferencesUiState.Loading
+
+            val result = repository.updatePreferences(colorScheme = colorScheme)
+
+            result.onSuccess {
+                _uiState.value = PreferencesUiState.Success("¡Cambio guardado correctamente!")
+                delay(2000)
+                _uiState.value = PreferencesUiState.Idle
+            }.onFailure { error ->
+                _uiState.value = PreferencesUiState.Error(error.message ?: "Error al actualizar paleta de colores")
+                delay(2000)
+                _uiState.value = PreferencesUiState.Idle
+            }
         }
     }
 
-    fun updateFontSize(isLarge: Boolean) {
+    fun updateFontSize(isChecked: Boolean) {
         viewModelScope.launch {
-            val size = if (isLarge) AppFontSize.LARGE else AppFontSize.REGULAR
-            repository.updateSettings(fontSize = size)
+            _uiState.value = PreferencesUiState.Loading
+
+            val fontSize = if (isChecked) AppFontSize.LARGE else AppFontSize.REGULAR
+
+            val result = repository.updatePreferences(fontSize = fontSize)
+
+            result.onSuccess {
+                _uiState.value = PreferencesUiState.Success("¡Cambio guardado correctamente!")
+                delay(2000)
+                _uiState.value = PreferencesUiState.Idle
+            }.onFailure { error ->
+                _uiState.value = PreferencesUiState.Error(error.message ?: "Error al actualizar tamaño de fuente")
+                delay(2000)
+                _uiState.value = PreferencesUiState.Idle
+            }
         }
     }
 
-    fun updateNotificationSound(isEnabled: Boolean) {
+    fun updateNotificationSound(isChecked: Boolean) {
         viewModelScope.launch {
-            val sound = if (isEnabled) AppNotificationSound.ON else AppNotificationSound.OFF
-            repository.updateSettings(sound = sound)
+            _uiState.value = PreferencesUiState.Loading
+
+            val notificationSound = if (isChecked) AppNotificationSound.ON else AppNotificationSound.OFF
+
+            val result = repository.updatePreferences(notificationSound = notificationSound)
+
+            result.onSuccess {
+                _uiState.value = PreferencesUiState.Success("¡Cambio guardado correctamente!")
+                delay(2000)
+                _uiState.value = PreferencesUiState.Idle
+            }.onFailure { error ->
+                _uiState.value = PreferencesUiState.Error(error.message ?: "Error al actualizar sonido de notificación")
+                delay(2000)
+                _uiState.value = PreferencesUiState.Idle
+            }
         }
     }
 
-    fun updateExplanationMode(isEnabled: Boolean) {
+    fun updateExhaustivity(isChecked: Boolean) {
         viewModelScope.launch {
-            val mode = if (isEnabled) AppExplanationMode.ON else AppExplanationMode.OFF
-            repository.updateSettings(explanation = mode)
+            _uiState.value = PreferencesUiState.Loading
+
+            val exhaustivity = if (isChecked) AppExhaustivity.ENHANCED else AppExhaustivity.REGULAR
+
+            val result = repository.updatePreferences(exhaustivity = exhaustivity)
+
+            result.onSuccess {
+                _uiState.value = PreferencesUiState.Success("¡Cambio guardado correctamente!")
+                delay(2000)
+                _uiState.value = PreferencesUiState.Idle
+            }.onFailure { error ->
+                _uiState.value = PreferencesUiState.Error(error.message ?: "Error al actualizar nivel de exhaustividad")
+                delay(2000)
+                _uiState.value = PreferencesUiState.Idle
+            }
         }
     }
 
-    fun updateExhaustivity(isEnabled: Boolean) {
+    fun updateExplanationMode(isChecked: Boolean) {
         viewModelScope.launch {
-            val mode = if (isEnabled) AppExhaustivity.ENHANCED else AppExhaustivity.REGULAR
-            repository.updateSettings(exhaustivity = mode)
+            _uiState.value = PreferencesUiState.Loading
+
+            val explanationMode = if (isChecked) AppExplanationMode.ON else AppExplanationMode.OFF
+
+            val result = repository.updatePreferences(explanationMode = explanationMode)
+
+            result.onSuccess {
+                _uiState.value = PreferencesUiState.Success("¡Cambio guardado correctamente!")
+                delay(2000)
+                _uiState.value = PreferencesUiState.Idle
+            }.onFailure { error ->
+                _uiState.value = PreferencesUiState.Error(error.message ?: "Error al actualizar explicaciones")
+                delay(2000)
+                _uiState.value = PreferencesUiState.Idle
+            }
         }
+    }
+
+    fun resetState() {
+        _uiState.value = PreferencesUiState.Idle
     }
 }
 
-class SettingsViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
+class PreferencesViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PreferencesViewModel::class.java)) {
 
@@ -56,7 +140,7 @@ class SettingsViewModelFactory(private val context: Context) : ViewModelProvider
             val localAPi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
 
-            val repository = UserRepository(localAPi, cloudApi, userInfo)
+            val repository = UserUpdateRepository(localAPi, cloudApi, userInfo)
 
             @Suppress("UNCHECKED_CAST")
             return PreferencesViewModel(repository) as T

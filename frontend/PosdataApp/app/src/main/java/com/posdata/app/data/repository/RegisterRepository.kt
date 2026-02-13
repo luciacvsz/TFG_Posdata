@@ -3,14 +3,15 @@ package com.posdata.app.data.repository
 import com.posdata.app.data.local.UserInfo
 import com.posdata.app.model.AppPreferences
 import com.posdata.app.model.Contact
-import com.posdata.app.data.remote.ApiService
+import com.posdata.app.data.remote.CloudApiService
+import com.posdata.app.data.remote.LocalApiService
 import com.posdata.app.data.remote.request.CheckEmailPOSTRequest
 import com.posdata.app.data.remote.request.RegisterPOSTRequest
 import com.posdata.app.data.remote.request.UserPOSTRequest
 
 class RegisterRepository(
-    private val localApi: ApiService,
-    private val cloudApi: ApiService,
+    private val localApi: LocalApiService,
+    private val cloudApi: CloudApiService,
     private val userInfo: UserInfo
 ) {
     suspend fun performRegistration(fullName: String, phoneNumber: String, email: String, password: String ): Result<String> {
@@ -26,19 +27,21 @@ class RegisterRepository(
 
             val cloudData = try {
                 val cloudResp = cloudApi.postUser(UserPOSTRequest(fullName, phoneNumber, email))
-                if (cloudResp.isSuccessful) cloudResp.body() else null
+                val body = cloudResp.body()
+                if (!cloudResp.isSuccessful || body == null) throw Exception()
+                body
             } catch (e: Exception) {
                 return Result.failure(Exception("Ha ocurrido un error tratando de dar de alta al usuario en el cloud"))
             }
 
-            val userId = cloudData?.userId
+            val userId = cloudData.userId
 
             val contact = Contact(
                 phoneNumber = phoneNumber,
                 email = email
             )
 
-            val localResp2 = localApi.postRegister(RegisterPOSTRequest(userId, email, password))
+            val localResp2 = localApi.postRegister(userId, RegisterPOSTRequest(email, password))
             val localData2 = localResp2.body()
 
             if (!localResp2.isSuccessful || localData2 == null || !localData2.success) {

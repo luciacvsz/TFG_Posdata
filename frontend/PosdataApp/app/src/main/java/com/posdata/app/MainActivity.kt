@@ -31,44 +31,38 @@ class MainActivity : ComponentActivity() {
                 val userDataState = userInfo.userData.collectAsState(initial = null)
                 val userData = userDataState.value
 
-                val authNavController = rememberNavController()
-
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    when {
-                        userData == null -> {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
-                            }
-                        }
-                        userData.isLoggedIn -> {
-                            MainScreen(userData = userData)
-                        }
-                        else -> {
-                            NavHost(
-                                navController = authNavController,
-                                startDestination = Screen.Login.route
-                            ) {
-                                composable(Screen.Login.route) {
-                                    LoginScreen(
-                                        onRegisterClick = {
-                                            authNavController.navigate(Screen.Register.route)
-                                        },
-                                        onLoginSuccess = {
-                                            authNavController.navigate(Screen.Home.route)
-                                        }
-                                    )
-                                }
+                    val rootNavController = rememberNavController()
 
-                                composable(Screen.Register.route) {
-                                    RegisterScreen(
-                                        onBackClick = {
-                                            authNavController.popBackStack()
-                                        },
-                                        onRegisterSuccess = {
-                                            authNavController.navigate(Screen.Home.route)
-                                        }
-                                    )
-                                }
+                    if(userData == null) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    } else {
+                        NavHost(
+                            navController = rootNavController,
+                            startDestination = if (userData.isLoggedIn) "main_flow" else Screen.Login.route
+                        ) {
+                            composable(Screen.Login.route) {
+                                LoginScreen(
+                                    onRegisterClick = {
+                                        rootNavController.navigate(Screen.Register.route)
+                                    },
+                                    onLoginSuccess = {}
+                                )
+                            }
+
+                            composable(Screen.Register.route) {
+                                RegisterScreen(
+                                    onBackClick = {
+                                        rootNavController.popBackStack()
+                                    },
+                                    onRegisterSuccess = {}
+                                )
+                            }
+
+                            composable("main_flow") {
+                                MainScreen(userData = userData)
                             }
                         }
                     }

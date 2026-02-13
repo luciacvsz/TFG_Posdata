@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -25,8 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.posdata.app.ui.theme.PosdataBlackText
@@ -37,8 +41,8 @@ import com.posdata.app.ui.theme.SoraFontFamily
 
 @Composable
 fun PosdataClickableCard(
-    label: String,
-    value: String? = null,
+    title: String,
+    subtitle: String? = null,
     onClick: () -> Unit,
     icon: @Composable (() -> Unit)? = {
         Icon(
@@ -62,21 +66,73 @@ fun PosdataClickableCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = label,
+                    text = title,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = PosdataBlackText
                 )
-                if (value != null) {
+                if (subtitle != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = value,
+                        text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
                         color = PosdataMutedText
                     )
                 }
             }
             icon?.invoke()
+        }
+    }
+}
+
+@Composable
+fun PosdataContactClickableCard(
+    name: String,
+    role: String,
+    phone: String? = null,
+    email: String? = null,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, PosdataGreyBorder)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(20.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    buildAnnotatedString {
+                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                            append("$name ")
+                        }
+                        append("- $role")
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = PosdataBlackText,
+                    fontSize = 18.sp
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                if (phone != null) {
+                    Text(text = phone, style = MaterialTheme.typography.bodyMedium, color = PosdataMutedText)
+                }
+                if (email != null) {
+                    Text(text = email, style = MaterialTheme.typography.bodyMedium, color = PosdataMutedText)
+                }
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Ver",
+                tint = PosdataLightBlue,
+                modifier = Modifier.size(28.dp)
+            )
         }
     }
 }

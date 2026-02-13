@@ -7,19 +7,19 @@ object RetrofitClient {
     private const val LOCAL_URL = "http://10.0.2.2:3000/"
     private const val CLOUD_URL = "https://w82baca113.execute-api.eu-west-3.amazonaws.com/test/"
 
-    val localInstance: ApiService by lazy {
+    val localInstance: LocalApiService by lazy {
         Retrofit.Builder()
             .baseUrl(LOCAL_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(ApiService::class.java)
+            .create(LocalApiService::class.java)
     }
 
-    val cloudInstance: ApiService by lazy {
+    val cloudInstance: CloudApiService by lazy {
         Retrofit.Builder()
             .baseUrl(CLOUD_URL)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-            .create(ApiService::class.java)
+            .create(CloudApiService::class.java)
     }
 }

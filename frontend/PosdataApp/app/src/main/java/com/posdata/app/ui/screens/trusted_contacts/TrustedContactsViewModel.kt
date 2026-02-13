@@ -6,36 +6,38 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.posdata.app.data.local.UserInfo
 import com.posdata.app.data.remote.RetrofitClient
-import com.posdata.app.data.repository.UserRepository
+import com.posdata.app.data.repository.UserUpdateRepository
 import com.posdata.app.model.TrustedContact
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// Estado de la UI
-sealed class ContactsUiState {
-    object Idle : ContactsUiState()
-    object Loading : ContactsUiState()
-    object Success : ContactsUiState()
-    data class Error(val message: String) : ContactsUiState()
+sealed class TrustedContactsUiState {
+    object Idle : TrustedContactsUiState()
+    object Loading : TrustedContactsUiState()
+    data class Success(val message: String) : TrustedContactsUiState()
+    data class Error(val message: String) : TrustedContactsUiState()
 }
 
-class TrustedContactsViewModel(private val repository: UserRepository) : ViewModel() {
+class TrustedContactsViewModel(
+    private val repository: UserUpdateRepository
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<ContactsUiState>(ContactsUiState.Idle)
-    val uiState: StateFlow<ContactsUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow<TrustedContactsUiState>(TrustedContactsUiState.Idle)
+    val uiState: StateFlow<TrustedContactsUiState> = _uiState.asStateFlow()
 
     fun addContact(currentList: List<TrustedContact>, newContact: TrustedContact) {
         val newList = currentList + newContact
-        syncContacts(newList)
+        syncContacts(newList, "Contacto añadido correctamente")
     }
 
     fun updateContact(currentList: List<TrustedContact>, index: Int, updatedContact: TrustedContact) {
         if (index in currentList.indices) {
             val newList = currentList.toMutableList()
             newList[index] = updatedContact
-            syncContacts(newList)
+            syncContacts(newList, "Contacto actualizado")
         }
     }
 
@@ -43,26 +45,30 @@ class TrustedContactsViewModel(private val repository: UserRepository) : ViewMod
         if (index in currentList.indices) {
             val newList = currentList.toMutableList()
             newList.removeAt(index)
-            syncContacts(newList)
+            syncContacts(newList, "Contacto eliminado")
         }
     }
 
-    private fun syncContacts(newList: List<TrustedContact>) {
+    private fun syncContacts(newList: List<TrustedContact>, successMessage: String) {
         viewModelScope.launch {
-            _uiState.value = ContactsUiState.Loading
+            _uiState.value = TrustedContactsUiState.Loading
 
             val result = repository.syncContacts(newList)
 
             result.onSuccess {
-                _uiState.value = ContactsUiState.Success
+                _uiState.value = TrustedContactsUiState.Success(successMessage)
+                delay(2000)
+                _uiState.value = TrustedContactsUiState.Idle
             }.onFailure { error ->
-                _uiState.value = ContactsUiState.Error(error.message ?: "Error al sincronizar contactos")
+                _uiState.value = TrustedContactsUiState.Error(error.message ?: "Error al sincronizar contactos")
+                delay(2000)
+                _uiState.value = TrustedContactsUiState.Idle
             }
         }
     }
 
     fun resetState() {
-        _uiState.value = ContactsUiState.Idle
+        _uiState.value = TrustedContactsUiState.Idle
     }
 }
 
@@ -74,7 +80,7 @@ class TrustedContactsViewModelFactory(private val context: Context) : ViewModelP
             val localAPi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
 
-            val repository = UserRepository(localAPi, cloudApi, userInfo)
+            val repository = UserUpdateRepository(localAPi, cloudApi, userInfo)
 
             @Suppress("UNCHECKED_CAST")
             return TrustedContactsViewModel(repository) as T

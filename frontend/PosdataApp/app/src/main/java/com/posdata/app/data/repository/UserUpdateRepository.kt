@@ -1,14 +1,15 @@
 package com.posdata.app.data.repository
 
 import com.posdata.app.data.local.UserInfo
-import com.posdata.app.data.remote.ApiService
+import com.posdata.app.data.remote.CloudApiService
+import com.posdata.app.data.remote.LocalApiService
 import com.posdata.app.data.remote.request.*
 import com.posdata.app.model.*
 import kotlinx.coroutines.flow.first
 
-class UserRepository(
-    private val localApi: ApiService,
-    private val cloudApi: ApiService,
+class UserUpdateRepository(
+    private val localApi: LocalApiService,
+    private val cloudApi: CloudApiService,
     private val userInfo: UserInfo
 ) {
 
@@ -26,23 +27,38 @@ class UserRepository(
         return try {
             val userId = getCurrentUserId() ?: throw Exception("Usuario no identificado")
 
-            val request = ProfilePATCHRequest(
-                fullName = fullName,
-                phoneNumber = phoneNumber,
-                email = email
-            )
+            if (password == null) {
+                val cloudRequest = CloudProfilePATCHRequest(
+                    fullName = fullName,
+                    phoneNumber = phoneNumber,
+                    email = email
+                )
 
-            val response = cloudApi.patchProfile(userId, request)
-
-            if (!response.isSuccessful) {
-                throw Exception("Error al guardar perfil")
+                val cloudResponse = cloudApi.patchProfile(userId, cloudRequest)
+                if (!cloudResponse.isSuccessful) {
+                    throw Exception("Error al guardar perfil")
+                }
             }
 
-            userInfo.updateProfile(
-                fullName = fullName,
-                phoneNumber = phoneNumber,
-                email = email
-            )
+            if (fullName == null && phoneNumber == null) {
+                val localRequest = LocalProfilePATCHRequest(
+                    email = email,
+                    password = password
+                )
+
+                val localResponse = localApi.patchUser(userId, localRequest)
+                if(!localResponse.isSuccessful) {
+                    throw Exception("Error al guardar perfil")
+                }
+            }
+
+            if( password == null) {
+                userInfo.updateProfile(
+                    fullName = fullName,
+                    phoneNumber = phoneNumber,
+                    email = email
+                )
+            }
 
             Result.success(true)
         } catch (e: Exception) {
@@ -51,22 +67,22 @@ class UserRepository(
         }
     }
 
-    suspend fun updateSettings(
+    suspend fun updatePreferences(
+        colorScheme: AppColorScheme? = null,
         fontSize: AppFontSize? = null,
-        sound: AppNotificationSound? = null,
-        color: AppColorScheme? = null,
+        notificationSound: AppNotificationSound? = null,
         exhaustivity: AppExhaustivity? = null,
-        explanation: AppExplanationMode? = null
+        explanationMode: AppExplanationMode? = null
     ): Result<Boolean> {
         return try {
             val userId = getCurrentUserId() ?: throw Exception("Usuario no identificado")
 
             val preferencesDto = PreferencesDTO(
+                colorScheme = colorScheme,
                 fontSize = fontSize,
-                notificationSound = sound,
-                colorScheme = color,
+                notificationSound = notificationSound,
                 exhaustivity = exhaustivity,
-                explanationMode = explanation
+                explanationMode = explanationMode
             )
 
             val request = PreferencesPATCHRequest(preferences = preferencesDto)
@@ -77,11 +93,11 @@ class UserRepository(
             }
 
             userInfo.updatePreferences(
+                colorScheme = colorScheme,
                 fontSize = fontSize,
-                sound = sound,
-                color = color,
+                notificationSound = notificationSound,
                 exhaustivity = exhaustivity,
-                explanation = explanation
+                explanationMode = explanationMode
             )
 
             Result.success(true)

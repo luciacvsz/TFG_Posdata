@@ -84,7 +84,8 @@ app.post("/api/check-email", (req, res) => {
 });
 
 app.post("/api/register", (req, res) => {
-  const { user_id, email, password } = req.body;
+  const { user_id } = req.query;
+  const { email, password } = req.body;
 
   if (!user_id) {
     return res
@@ -110,6 +111,82 @@ app.post("/api/register", (req, res) => {
       tokens: 100,
     });
   });
+});
+
+app.delete("/api/user", (req, res) => {
+  const { user_id } = req.query;
+
+  if (!user_id) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Falta el user_id de la nube" });
+  }
+
+  const sql = "DELETE FROM users WHERE user_id = ?";
+
+  db.query(sql, [user_id], (err, result) => {
+    if (err) {
+      console.error("Error al eliminar:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Error al eliminar usuario en local",
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Usuario eliminado con éxito",
+    });
+  });
+});
+
+app.patch("/api/user", (req, res) => {
+  const { user_id } = req.query;
+  const { email, password } = req.body;
+
+  if (!user_id) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Falta el user_id de la nube" });
+  }
+
+  if (email != undefined) {
+    const sqlEmail = "UPDATE users SET email = ? WHERE user_id = ?";
+
+    db.query(sqlEmail, [email, user_id], (err, result) => {
+      if (err) {
+        console.error("Error al actualizar email:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Error al actualizar email en local",
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: "Email actualizado con éxito",
+      });
+    });
+  }
+
+  if (password != undefined) {
+    const sqlPassword = "UPDATE users SET password = ? WHERE user_id = ?";
+
+    db.query(sqlPassword, [password, user_id], (err, result) => {
+      if (err) {
+        console.error("Error al actualizar contraseña:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Error al actualizar contraseña en local",
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: "Contraseña actualizada con éxito",
+      });
+    });
+  }
 });
 
 const PORT = 3000;

@@ -41,8 +41,8 @@ fun RegisterScreen(
     val state = viewModel.state
 
     var fullName by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
     LaunchedEffect(state.isSuccess) {
@@ -121,21 +121,21 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             PosdataInput(
-                label = "Correo Electrónico",
-                placeholder = "tu@email.com",
-                value = email,
-                onValueChange = { email = it },
-                keyboardType = KeyboardType.Email
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            PosdataInput(
                 label = "Teléfono",
                 placeholder = "+34 600 000 000",
                 value = phoneNumber,
                 onValueChange = { phoneNumber = it },
                 keyboardType = KeyboardType.Phone
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            PosdataInput(
+                label = "Correo Electrónico",
+                placeholder = "tu@email.com",
+                value = email,
+                onValueChange = { email = it },
+                keyboardType = KeyboardType.Email
             )
 
             Spacer(modifier = Modifier.height(16.dp))

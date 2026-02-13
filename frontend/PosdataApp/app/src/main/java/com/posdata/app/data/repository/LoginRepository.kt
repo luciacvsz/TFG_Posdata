@@ -3,12 +3,13 @@ package com.posdata.app.data.repository
 import com.posdata.app.data.local.UserInfo
 import com.posdata.app.model.AppPreferences
 import com.posdata.app.model.Contact
-import com.posdata.app.data.remote.ApiService
+import com.posdata.app.data.remote.CloudApiService
+import com.posdata.app.data.remote.LocalApiService
 import com.posdata.app.data.remote.request.LoginPOSTRequest
 
 class LoginRepository(
-    private val localApi: ApiService,
-    private val cloudApi: ApiService,
+    private val localApi: LocalApiService,
+    private val cloudApi: CloudApiService,
     private val userInfo: UserInfo
 ) {
     suspend fun performLoginAndSync(email: String, password: String): Result<String> {
