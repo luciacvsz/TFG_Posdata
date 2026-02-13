@@ -21,7 +21,6 @@ import com.posdata.app.ui.components.PosdataClickableCard
 import com.posdata.app.ui.components.PosdataEditDialog
 import com.posdata.app.ui.components.PosdataPrimaryButton
 import com.posdata.app.ui.components.PosdataStatusDialog
-import com.posdata.app.ui.theme.*
 
 @Composable
 fun ProfileContent(
@@ -50,7 +49,7 @@ fun ProfileContent(
         Text(
             text = "Mi Perfil",
             style = MaterialTheme.typography.headlineLarge,
-            color = PosdataBlackText,
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Start,
             modifier = Modifier.fillMaxWidth()
         )
@@ -111,7 +110,7 @@ fun ProfileContent(
 
         PosdataPrimaryButton(
             text = "Eliminar cuenta",
-            colorOverride = PosdataRed,
+            colorOverride = MaterialTheme.colorScheme.error,
             enabled = !isLoading,
             onClick = { showDeleteConfirm = true }
         )
@@ -121,10 +120,12 @@ fun ProfileContent(
 
     if (uiState is ProfileUiState.Loading) {
         Box(
-            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.3f)),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.3f)),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = PosdataBlue)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
     }
 
@@ -151,14 +152,14 @@ fun ProfileContent(
             ProfileField.FULL_NAME -> userData.fullName
             ProfileField.PHONE_NUMBER -> userData.contact.phoneNumber
             ProfileField.EMAIL -> userData.contact.email
-            ProfileField.PASSWORD -> {}
+            ProfileField.PASSWORD -> ""
             else -> ""
         }
 
         PosdataEditDialog(
             title = "Editar ${getFieldLabel(currentField)}",
             label = getFieldLabel(currentField),
-            initialValue = initialValue as String,
+            initialValue = initialValue,
             isPassword = currentField == ProfileField.PASSWORD,
             onDismiss = { showEditDialog = false },
             onSave = { newValue ->
@@ -176,8 +177,19 @@ fun ProfileContent(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("¿Eliminar cuenta?", fontWeight = FontWeight.Bold) },
-            text = { Text("Esta acción borrará tus datos permanentemente de la nube y del dispositivo. No se puede deshacer.") },
+            title = {
+                Text(
+                    "¿Eliminar cuenta?",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            },
+            text = {
+                Text(
+                    "Esta acción borrará tus datos permanentemente de la nube y del dispositivo. No se puede deshacer.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -185,15 +197,22 @@ fun ProfileContent(
                         viewModel.deleteAccount()
                     }
                 ) {
-                    Text("ELIMINAR", color = PosdataRed, fontWeight = FontWeight.Bold)
+                    Text(
+                        "ELIMINAR",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("CANCELAR", color = PosdataMutedText)
+                    Text(
+                        "CANCELAR",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             },
-            containerColor = Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(24.dp)
         )
     }

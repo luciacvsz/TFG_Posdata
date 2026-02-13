@@ -33,10 +33,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.posdata.app.ui.theme.PosdataBlackText
-import com.posdata.app.ui.theme.PosdataGreyBorder
-import com.posdata.app.ui.theme.PosdataLightBlue
-import com.posdata.app.ui.theme.PosdataMutedText
 import com.posdata.app.ui.theme.SoraFontFamily
 
 @Composable
@@ -48,7 +44,7 @@ fun PosdataClickableCard(
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = PosdataLightBlue
+            tint = MaterialTheme.colorScheme.primary
         )
     }
 ) {
@@ -56,8 +52,10 @@ fun PosdataClickableCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, PosdataGreyBorder)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(
             modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 12.dp),
@@ -69,14 +67,14 @@ fun PosdataClickableCard(
                     text = title,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = PosdataBlackText
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 if (subtitle != null) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = PosdataMutedText
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -97,8 +95,10 @@ fun PosdataContactClickableCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, PosdataGreyBorder)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(
             modifier = Modifier
@@ -116,21 +116,27 @@ fun PosdataContactClickableCard(
                         append("- $role")
                     },
                     style = MaterialTheme.typography.labelLarge,
-                    color = PosdataBlackText,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 18.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 if (phone != null) {
-                    Text(text = phone, style = MaterialTheme.typography.bodyMedium, color = PosdataMutedText)
-                }
+                    Text(
+                        text = phone,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )                }
                 if (email != null) {
-                    Text(text = email, style = MaterialTheme.typography.bodyMedium, color = PosdataMutedText)
-                }
+                    Text(
+                        text = email,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )                }
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "Ver",
-                tint = PosdataLightBlue,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(28.dp)
             )
         }
@@ -161,13 +167,13 @@ fun PosdataStatCard(
                 fontFamily = SoraFontFamily,
                 fontWeight = FontWeight.Bold,
                 fontSize = 60.sp,
-                color = Color.White
+                color = MaterialTheme.colorScheme.onPrimary
             )
             Text(
                 text = label,
                 style = MaterialTheme.typography.titleMedium,
                 fontSize = 18.sp,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onPrimary,
                 textAlign = TextAlign.Center,
                 fontWeight = FontWeight.SemiBold
             )

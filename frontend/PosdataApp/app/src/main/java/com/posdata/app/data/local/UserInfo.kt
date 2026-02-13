@@ -54,11 +54,11 @@ class UserInfo(private val context: Context) {
             prefs[PHONE_NUMBER] = contact.phoneNumber
             prefs[EMAIL] = contact.email
 
-            prefs[PREF_COLOR_SCHEME] = preferences.colorScheme.name
-            prefs[PREF_FONT_SIZE] = preferences.fontSize.name
-            prefs[PREF_NOTIFICATION_SOUND] = preferences.notificationSound.name
-            prefs[PREF_EXHAUSTIVITY] = preferences.exhaustivity.name
-            prefs[PREF_EXPLANATION_MODE] = preferences.explanationMode.name
+            prefs[PREF_COLOR_SCHEME] = (preferences.colorScheme ?: AppColorScheme.LIGHT).name
+            prefs[PREF_FONT_SIZE] = (preferences.fontSize ?: AppFontSize.REGULAR).name
+            prefs[PREF_NOTIFICATION_SOUND] = (preferences.notificationSound ?: AppNotificationSound.ON).name
+            prefs[PREF_EXHAUSTIVITY] = (preferences.exhaustivity ?: AppExhaustivity.REGULAR).name
+            prefs[PREF_EXPLANATION_MODE] = (preferences.explanationMode ?: AppExplanationMode.ON).name
 
             prefs[TRUSTED_CONTACTS_JSON] = trustedContactsJson
         }
@@ -125,7 +125,7 @@ class UserInfo(private val context: Context) {
         )
 
         val preferences = AppPreferences(
-            colorScheme = enumValueOfOrNull<AppColorScheme>(prefs[PREF_COLOR_SCHEME]) ?: AppColorScheme.STANDARD,
+            colorScheme = enumValueOfOrNull<AppColorScheme>(prefs[PREF_COLOR_SCHEME]) ?: AppColorScheme.LIGHT,
             fontSize = enumValueOfOrNull<AppFontSize>(prefs[PREF_FONT_SIZE]) ?: AppFontSize.REGULAR,
             notificationSound = enumValueOfOrNull<AppNotificationSound>(prefs[PREF_NOTIFICATION_SOUND]) ?: AppNotificationSound.ON,
             exhaustivity = enumValueOfOrNull<AppExhaustivity>(prefs[PREF_EXHAUSTIVITY]) ?: AppExhaustivity.REGULAR,

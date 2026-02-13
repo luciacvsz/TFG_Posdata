@@ -1,59 +1,35 @@
 package com.posdata.app.ui.screens.trusted_contacts
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.posdata.app.data.local.UserInfo
 import com.posdata.app.model.TrustedContact
 import com.posdata.app.model.UserData
 import com.posdata.app.ui.components.PosdataContactClickableCard
 import com.posdata.app.ui.components.PosdataContactDialog
 import com.posdata.app.ui.components.PosdataPrimaryButton
 import com.posdata.app.ui.components.PosdataStatusDialog
-import com.posdata.app.ui.screens.profile.ProfileField
-import com.posdata.app.ui.screens.profile.ProfileUiState
-import com.posdata.app.ui.screens.profile.ProfileViewModel
-import com.posdata.app.ui.screens.profile.ProfileViewModelFactory
-import com.posdata.app.ui.theme.*
-import kotlinx.coroutines.launch
 
 @Composable
 fun TrustedContactsContent(
     userData: UserData?,
     viewModel: TrustedContactsViewModel = viewModel(
-        factory = TrustedContactsViewModelFactory (LocalContext.current)
+        factory = TrustedContactsViewModelFactory(LocalContext.current)
     )
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -66,10 +42,13 @@ fun TrustedContactsContent(
 
     if (uiState is TrustedContactsUiState.Loading) {
         Box(
-            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).zIndex(1f),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.4f))
+                .zIndex(1f),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = Color.White)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 
@@ -115,7 +94,7 @@ fun TrustedContactsContent(
                 Text(
                     text = "Contactos de\nConfianza",
                     style = MaterialTheme.typography.headlineLarge,
-                    color = PosdataBlackText,
+                    color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Start,
                     lineHeight = 60.sp,
                     modifier = Modifier.fillMaxWidth()
@@ -133,7 +112,7 @@ fun TrustedContactsContent(
                         Text(
                             text = "No tienes contactos de confianza añadidos.\n¡Añade uno para estar más seguro!",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = PosdataMutedText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
                     }

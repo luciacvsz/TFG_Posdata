@@ -18,12 +18,11 @@ import com.posdata.app.R
 import com.posdata.app.ui.components.PosdataInput
 import com.posdata.app.ui.components.PosdataPrimaryButton
 import com.posdata.app.ui.components.PosdataSimpleDialog
-import com.posdata.app.ui.theme.*
 
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel = viewModel(
-        factory = LoginViewModelFactory (LocalContext.current)
+        factory = LoginViewModelFactory(LocalContext.current)
     ),
     onRegisterClick: () -> Unit,
     onLoginSuccess: () -> Unit
@@ -102,7 +101,7 @@ fun LoginScreen(
             Text(
                 text = "¿Olvidaste tu contraseña?",
                 style = MaterialTheme.typography.bodyLarge,
-                color = PosdataBlue,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -113,9 +112,19 @@ fun LoginScreen(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
         ) {
-            HorizontalDivider(modifier = Modifier.weight(1f), color = PosdataGreyBorder)
-            Text(text = " o ", color = PosdataMutedText, modifier = Modifier.padding(horizontal = 8.dp))
-            HorizontalDivider(modifier = Modifier.weight(1f), color = PosdataGreyBorder)
+            HorizontalDivider(
+                modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.outline
+            )
+            Text(
+                text = " o ",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+            HorizontalDivider(
+                modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.outline
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))

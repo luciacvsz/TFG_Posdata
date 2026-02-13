@@ -42,7 +42,7 @@ fun HomeContent(
             Text(
                 text = "¡Hola, $fullName!",
                 style = MaterialTheme.typography.headlineLarge,
-                color = PosdataBlackText,
+                color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Start,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -52,8 +52,8 @@ fun HomeContent(
             PosdataStatCard(
                 number = analyzedSms.toString(),
                 label = "SMS Analizados",
-                colorStart = PosdataLightBlue,
-                colorEnd = PosdataBlue,
+                colorStart = MaterialTheme.colorScheme.primaryContainer,
+                colorEnd = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.height(170.dp)
             )
 
@@ -62,8 +62,8 @@ fun HomeContent(
             PosdataStatCard(
                 number = fraudSms.toString(),
                 label = "Amenazas\nBloqueadas",
-                colorStart = PosdataLightBlue,
-                colorEnd = PosdataBlue,
+                colorStart = MaterialTheme.colorScheme.primaryContainer,
+                colorEnd = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.height(170.dp)
             )
         }
@@ -79,7 +79,7 @@ fun HomeContent(
             Text(
                 text = "¿Necesitas ayuda urgente?",
                 style = MaterialTheme.typography.bodyLarge,
-                color = PosdataMutedText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
@@ -87,7 +87,7 @@ fun HomeContent(
                 text = "Llamada de Emergencia",
                 onClick = { /* Lógica 112 */ },
                 modifier = Modifier.height(90.dp),
-                colorOverride = PosdataRed
+                colorOverride = MaterialTheme.colorScheme.error
             )
 
             Spacer(modifier = Modifier.height(60.dp))

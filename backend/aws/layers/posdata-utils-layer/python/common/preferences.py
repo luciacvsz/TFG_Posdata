@@ -27,19 +27,19 @@ class ColorScheme(Enum):
     Enum for color scheme preferences.
 
     Values:
-    - STANDARD: Standard color scheme.
-    - HIGH_CONTRAST: High contrast color scheme for better readability.
-    - PROTANOPIA: Color scheme for users with protanopia (red-green color blindness).
-    - DEUTERANOPIA: Color scheme for users with deuteranopia (red-green color blindness).
-    - TRITANOPIA: Color scheme for users with tritanopia (blue-yellow color blindness).
-    - ACHROMATOPSIA: Color scheme for users with achromatopsia (no color vision).
+    - LIGHT: Light color scheme with bright backgrounds and dark text.
+    - DARK: Dark color scheme with dark backgrounds and light text.
+    - HIGH_CONTRAST: High contrast color scheme for better visibility.
+    - RED_GREEN_SAFE: Color scheme that is safe for red-green color blindness.
+    - BLUE_YELLOW_SAFE: Color scheme that is safe for blue-yellow color blindness.
+    - GRAYSCALE: Grayscale color scheme for users with color vision deficiencies.
     '''
-    STANDARD = 'standard'
+    LIGHT = 'light'
+    DARK = 'dark'
     HIGH_CONTRAST = 'high_contrast'
-    PROTANOPIA = 'protanopia'
-    DEUTERANOPIA = 'deuteranopia'
-    TRITANOPIA = 'tritanopia'
-    ACHROMATOPSIA = 'achromatopsia'
+    RED_GREEN_SAFE = 'red_green_safe'
+    BLUE_YELLOW_SAFE = 'blue_yellow_safe'
+    GRAYSCALE = 'grayscale'
 
 class Exhaustivity(Enum):
     '''

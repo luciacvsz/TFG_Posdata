@@ -15,11 +15,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import com.posdata.app.ui.theme.PosdataBlackText
-import com.posdata.app.ui.theme.PosdataBlue
-import com.posdata.app.ui.theme.PosdataGreyBorder
-import com.posdata.app.ui.theme.PosdataMutedText
-import com.posdata.app.ui.theme.PosdataSurface
 
 @Composable
 fun PosdataInput(
@@ -36,14 +31,19 @@ fun PosdataInput(
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
-            color = PosdataBlackText,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 8.dp)
         )
 
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(placeholder, color = PosdataMutedText) },
+            placeholder = {
+                Text(
+                    placeholder,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             textStyle = MaterialTheme.typography.bodyLarge,
@@ -52,11 +52,13 @@ fun PosdataInput(
                 keyboardType = keyboardType
             ),
             colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = PosdataGreyBorder,
-                focusedBorderColor = PosdataBlue,
-                focusedContainerColor = PosdataSurface,
-                unfocusedContainerColor = PosdataSurface,
-                cursorColor = PosdataBlue
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                cursorColor = MaterialTheme.colorScheme.primary,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface
             ),
             singleLine = singleLine
         )

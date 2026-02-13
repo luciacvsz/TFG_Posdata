@@ -20,10 +20,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
-import com.posdata.app.ui.theme.PosdataBlackText
-import com.posdata.app.ui.theme.PosdataBlue
-import com.posdata.app.ui.theme.PosdataGreyBorder
-import com.posdata.app.ui.theme.PosdataLightBlue
+
 @Composable
 fun PosdataPrimaryButton(
     text: String,
@@ -47,10 +44,19 @@ fun PosdataPrimaryButton(
         enabled = enabled && !isLoading,
     ) {
         val backgroundModifier = when {
-            !enabled || isLoading -> Modifier.background(SolidColor(PosdataGreyBorder))
-            colorOverride != null -> Modifier.background(SolidColor(colorOverride))
+            !enabled || isLoading -> Modifier.background(
+                SolidColor(MaterialTheme.colorScheme.surfaceVariant)
+            )
+            colorOverride != null -> Modifier.background(
+                SolidColor(colorOverride)
+            )
             else -> Modifier.background(
-                Brush.horizontalGradient(colors = listOf(PosdataLightBlue, PosdataBlue))
+                Brush.horizontalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.primary
+                    )
+                )
             )
         }
 
@@ -61,14 +67,19 @@ fun PosdataPrimaryButton(
             contentAlignment = Alignment.Center
         ) {
             if (isLoading) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
             } else {
                 Text(
                     text = text,
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (colorOverride != null && colorOverride != Color.Transparent) Color.White
-                    else if (enabled) PosdataBlackText
-                    else Color.Gray
+                    color = when {
+                        colorOverride != null -> MaterialTheme.colorScheme.onError
+                        enabled -> MaterialTheme.colorScheme.onPrimaryContainer
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
             }
         }

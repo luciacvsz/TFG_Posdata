@@ -37,20 +37,20 @@ import com.posdata.app.ui.theme.*
 @Composable
 fun PreferencesContent(
     userData: UserData?,
-    viewModel: PreferencesViewModel = viewModel(
-        factory = PreferencesViewModelFactory(LocalContext.current)
-    )
+    viewModel: PreferencesViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val preferences = userData?.preferences ?: AppPreferences()
-    val isLoading = uiState is PreferencesUiState.Loading
 
     if (uiState is PreferencesUiState.Loading) {
         Box(
-            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).zIndex(1f),
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.4f))
+                .zIndex(1f),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = Color.White)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
         }
     }
 
@@ -84,7 +84,7 @@ fun PreferencesContent(
         Text(
             text = "Preferencias",
             style = MaterialTheme.typography.headlineLarge,
-            color = PosdataBlackText,
+            color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Start,
             modifier = Modifier.fillMaxWidth()
         )
@@ -94,7 +94,7 @@ fun PreferencesContent(
         Text(
             text = "Esquema de Color",
             style = MaterialTheme.typography.titleSmall,
-            color = PosdataMutedText,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
         )
 
@@ -103,22 +103,22 @@ fun PreferencesContent(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             PosdataColorOptionSwitch(
-                color = PosdataBlue,
-                label = "Estándar",
-                isSelected = preferences.colorScheme == AppColorScheme.STANDARD,
-                onClick = { viewModel.updateColorScheme(AppColorScheme.STANDARD) }
+                color = LightPrimary,
+                label = "Claro",
+                isSelected = preferences.colorScheme == AppColorScheme.LIGHT,
+                onClick = { viewModel.updateColorScheme(AppColorScheme.LIGHT) }
             )
             PosdataColorOptionSwitch(
-                color = Color.Black,
+                color = DarkPrimary,
+                label = "oscuro",
+                isSelected = preferences.colorScheme == AppColorScheme.DARK,
+                onClick = { viewModel.updateColorScheme(AppColorScheme.DARK) }
+            )
+            PosdataColorOptionSwitch(
+                color = HighContrastPrimary,
                 label = "Contraste",
                 isSelected = preferences.colorScheme == AppColorScheme.HIGH_CONTRAST,
                 onClick = { viewModel.updateColorScheme(AppColorScheme.HIGH_CONTRAST) }
-            )
-            PosdataColorOptionSwitch(
-                color = Color(0xFF8E44AD), // Violeta (distinguible para Protanopia)
-                label = "Protanopia",
-                isSelected = preferences.colorScheme == AppColorScheme.PROTANOPIA,
-                onClick = { viewModel.updateColorScheme(AppColorScheme.PROTANOPIA) }
             )
         }
 
@@ -129,28 +129,28 @@ fun PreferencesContent(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             PosdataColorOptionSwitch(
-                color = Color(0xFFD35400),
-                label = "Deutera...",
-                isSelected = preferences.colorScheme == AppColorScheme.DEUTERANOPIA,
-                onClick = { viewModel.updateColorScheme(AppColorScheme.DEUTERANOPIA) }
+                color = RedGreenSafePrimary,
+                label = "Rojo-Verde",
+                isSelected = preferences.colorScheme == AppColorScheme.RED_GREEN_SAFE,
+                onClick = { viewModel.updateColorScheme(AppColorScheme.RED_GREEN_SAFE) }
             )
             PosdataColorOptionSwitch(
-                color = Color(0xFF16A085),
-                label = "Tritanopia",
-                isSelected = preferences.colorScheme == AppColorScheme.TRITANOPIA,
-                onClick = { viewModel.updateColorScheme(AppColorScheme.TRITANOPIA) }
+                color = BlueYellowSafePrimary,
+                label = "Azul-Amarillo",
+                isSelected = preferences.colorScheme == AppColorScheme.BLUE_YELLOW_SAFE,
+                onClick = { viewModel.updateColorScheme(AppColorScheme.BLUE_YELLOW_SAFE) }
             )
             PosdataColorOptionSwitch(
-                color = Color.Gray,
-                label = "Acroma...",
-                isSelected = preferences.colorScheme == AppColorScheme.ACHROMATOPSIA,
-                onClick = { viewModel.updateColorScheme(AppColorScheme.ACHROMATOPSIA) }
+                color = GrayscalePrimary,
+                label = "Gris",
+                isSelected = preferences.colorScheme == AppColorScheme.GRAYSCALE,
+                onClick = { viewModel.updateColorScheme(AppColorScheme.GRAYSCALE) }
             )
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        HorizontalDivider(color = PosdataGreyBorder)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
         Spacer(modifier = Modifier.height(32.dp))
 
         PosdataPreferenceSwitch(

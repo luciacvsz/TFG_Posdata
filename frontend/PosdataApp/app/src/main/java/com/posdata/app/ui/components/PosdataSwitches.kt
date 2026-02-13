@@ -30,10 +30,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.posdata.app.ui.theme.PosdataBlackText
-import com.posdata.app.ui.theme.PosdataBlue
-import com.posdata.app.ui.theme.PosdataLightBlue
-import com.posdata.app.ui.theme.PosdataMutedText
 
 @Composable
 fun RowScope.PosdataColorOptionSwitch(
@@ -55,7 +51,7 @@ fun RowScope.PosdataColorOptionSwitch(
                 .background(color)
                 .border(
                     width = if (isSelected) 3.dp else 0.dp,
-                    color = if (isSelected) PosdataBlue else Color.Transparent,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -64,7 +60,7 @@ fun RowScope.PosdataColorOptionSwitch(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = "Seleccionado",
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -75,7 +71,11 @@ fun RowScope.PosdataColorOptionSwitch(
             style = MaterialTheme.typography.bodySmall,
             fontSize = 12.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) PosdataBlackText else PosdataMutedText,
+            color = if (isSelected) {
+                MaterialTheme.colorScheme.onBackground
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -98,7 +98,7 @@ fun PosdataPreferenceSwitch(
             style = MaterialTheme.typography.titleMedium,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            color = PosdataBlackText,
+            color = MaterialTheme.colorScheme.onBackground,
             lineHeight = 26.sp
         )
 
@@ -106,11 +106,11 @@ fun PosdataPreferenceSwitch(
             checked = isChecked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = PosdataLightBlue,
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
                 checkedBorderColor = Color.Transparent,
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = PosdataMutedText,
+                uncheckedThumbColor = MaterialTheme.colorScheme.surface,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
                 uncheckedBorderColor = Color.Transparent
             ),
             modifier = Modifier.scale(1.1f)

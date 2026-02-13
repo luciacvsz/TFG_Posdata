@@ -1,11 +1,9 @@
 package com.posdata.app.ui.screens.register
 
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -13,8 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -26,14 +22,12 @@ import com.posdata.app.R
 import com.posdata.app.ui.components.PosdataInput
 import com.posdata.app.ui.components.PosdataPrimaryButton
 import com.posdata.app.ui.components.PosdataSimpleDialog
-import com.posdata.app.ui.theme.*
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     viewModel: RegisterViewModel = viewModel(
-        factory = RegisterViewModelFactory (LocalContext.current)
+        factory = RegisterViewModelFactory(LocalContext.current)
     ),
     onBackClick: () -> Unit,
     onRegisterSuccess: () -> Unit
@@ -73,12 +67,14 @@ fun RegisterScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver",
-                            tint = PosdataBlue,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(36.dp)
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
             )
         }
     ) { paddingValues ->
@@ -104,7 +100,7 @@ fun RegisterScreen(
             Text(
                 text = "Crear Cuenta",
                 style = MaterialTheme.typography.titleLarge,
-                color = PosdataBlackText,
+                color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Start,
                 modifier = Modifier
                     .fillMaxWidth()

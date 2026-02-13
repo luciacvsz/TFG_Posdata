@@ -27,9 +27,13 @@ import com.posdata.app.ui.theme.*
 import com.posdata.app.ui.screens.profile.ProfileContent
 import com.posdata.app.ui.screens.trusted_contacts.TrustedContactsContent
 import com.posdata.app.ui.screens.preferences.PreferencesContent
+import com.posdata.app.ui.screens.preferences.PreferencesViewModel
 
 @Composable
-fun MainScreen(userData: UserData?) {
+fun MainScreen(
+    userData: UserData?,
+    preferencesViewModel: PreferencesViewModel
+) {
     val navController = rememberNavController()
 
     Scaffold(
@@ -66,7 +70,8 @@ fun MainScreen(userData: UserData?) {
 
             composable(Screen.Preferences.route) {
                 PreferencesContent(
-                    userData = userData
+                    userData = userData,
+                    viewModel =  preferencesViewModel
                 )
             }
         }
@@ -79,7 +84,7 @@ fun PosdataMainBottomBar(navController: NavController) {
     val currentRoute = navBackStackEntry?.destination?.route
 
     NavigationBar(
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 10.dp,
         modifier = Modifier.height(110.dp)
     ) {
@@ -96,9 +101,11 @@ fun PosdataMainBottomBar(navController: NavController) {
             icon = { Icon(Icons.Filled.Home, "Inicio", Modifier.size(32.dp)) },
             label = { Text("Inicio", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PosdataBlue,
-                selectedTextColor = PosdataBlue,
-                indicatorColor = PosdataLightBlue.copy(alpha = 0.3f)
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                indicatorColor = MaterialTheme.colorScheme.primaryContainer
             )
         )
 
@@ -114,13 +121,14 @@ fun PosdataMainBottomBar(navController: NavController) {
             icon = { Icon(Icons.Filled.Person, "Perfil", Modifier.size(32.dp)) },
             label = { Text("Perfil", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PosdataBlue,
-                selectedTextColor = PosdataBlue,
-                indicatorColor = PosdataLightBlue.copy(alpha = 0.3f)
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                indicatorColor = MaterialTheme.colorScheme.primaryContainer
             )
         )
 
-        // --- CONTACTOS ---
         NavigationBarItem(
             selected = currentRoute == Screen.TrustedContacts.route,
             onClick = {
@@ -133,13 +141,14 @@ fun PosdataMainBottomBar(navController: NavController) {
             icon = { Icon(Icons.Filled.Groups, "Contactos", Modifier.size(32.dp)) },
             label = { Text("Contactos", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PosdataBlue,
-                selectedTextColor = PosdataBlue,
-                indicatorColor = PosdataLightBlue.copy(alpha = 0.3f)
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                indicatorColor = MaterialTheme.colorScheme.primaryContainer
             )
         )
 
-        // --- AJUSTES ---
         NavigationBarItem(
             selected = currentRoute == Screen.Preferences.route,
             onClick = {
@@ -152,9 +161,11 @@ fun PosdataMainBottomBar(navController: NavController) {
             icon = { Icon(Icons.Filled.Settings, "Ajustes", Modifier.size(32.dp)) },
             label = { Text("Ajustes", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = PosdataBlue,
-                selectedTextColor = PosdataBlue,
-                indicatorColor = PosdataLightBlue.copy(alpha = 0.3f)
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                indicatorColor = MaterialTheme.colorScheme.primaryContainer
             )
         )
     }

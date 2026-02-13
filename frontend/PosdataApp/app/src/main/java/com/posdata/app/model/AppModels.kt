@@ -18,12 +18,12 @@ enum class AppNotificationSound {
 }
 
 enum class AppColorScheme {
-    @SerializedName("standard") STANDARD,
+    @SerializedName("light") LIGHT,
+    @SerializedName("dark") DARK,
     @SerializedName("high_contrast") HIGH_CONTRAST,
-    @SerializedName("protanopia") PROTANOPIA,
-    @SerializedName("deuteranopia") DEUTERANOPIA,
-    @SerializedName("tritanopia") TRITANOPIA,
-    @SerializedName("achromatopsia") ACHROMATOPSIA
+    @SerializedName("red_green_safe") RED_GREEN_SAFE,
+    @SerializedName("blue_yellow_safe") BLUE_YELLOW_SAFE,
+    @SerializedName("grayscale") GRAYSCALE
 }
 
 enum class AppExhaustivity {
@@ -39,7 +39,7 @@ enum class AppExplanationMode {
 data class AppPreferences(
     @SerializedName("font_size") val fontSize: AppFontSize = AppFontSize.REGULAR,
     @SerializedName("notification_sound") val notificationSound: AppNotificationSound = AppNotificationSound.ON,
-    @SerializedName("color_scheme") val colorScheme: AppColorScheme = AppColorScheme.STANDARD,
+    @SerializedName("color_scheme") val colorScheme: AppColorScheme = AppColorScheme.LIGHT,
     @SerializedName("exhaustivity") val exhaustivity: AppExhaustivity = AppExhaustivity.REGULAR,
     @SerializedName("explanation_mode") val explanationMode: AppExplanationMode = AppExplanationMode.ON,
 )

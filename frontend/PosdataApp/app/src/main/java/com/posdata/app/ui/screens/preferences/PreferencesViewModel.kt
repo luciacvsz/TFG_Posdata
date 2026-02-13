@@ -10,8 +10,12 @@ import com.posdata.app.data.repository.UserUpdateRepository
 import com.posdata.app.model.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed class PreferencesUiState {
@@ -22,11 +26,28 @@ sealed class PreferencesUiState {
 }
 
 class PreferencesViewModel(
-    private val repository: UserUpdateRepository) : ViewModel() {
+    private val repository: UserUpdateRepository,
+    private val userInfo: UserInfo
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<PreferencesUiState>(PreferencesUiState.Idle)
     val uiState: StateFlow<PreferencesUiState> = _uiState.asStateFlow()
 
+    val currentColorScheme: StateFlow<AppColorScheme> = userInfo.userData
+        .map { it.preferences.colorScheme }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = AppColorScheme.LIGHT
+        )
+
+    val currentFontSize: StateFlow<AppFontSize> = userInfo.userData
+        .map { it.preferences.fontSize }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = AppFontSize.REGULAR
+        )
 
     fun updateColorScheme(colorScheme: AppColorScheme) {
         viewModelScope.launch {
@@ -136,14 +157,12 @@ class PreferencesViewModelFactory(private val context: Context) : ViewModelProvi
         if (modelClass.isAssignableFrom(PreferencesViewModel::class.java)) {
 
             val userInfo = UserInfo(context)
-
             val localAPi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
-
             val repository = UserUpdateRepository(localAPi, cloudApi, userInfo)
 
             @Suppress("UNCHECKED_CAST")
-            return PreferencesViewModel(repository) as T
+            return PreferencesViewModel(repository, userInfo) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
