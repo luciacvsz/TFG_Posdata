@@ -11,9 +11,12 @@ import com.posdata.app.data.remote.response.UserGETResponse
 import com.posdata.app.data.remote.request.CloudProfilePATCHRequest
 import com.posdata.app.data.remote.request.LocalProfilePATCHRequest
 import com.posdata.app.data.remote.request.PreferencesPATCHRequest
+import com.posdata.app.data.remote.request.SMSPOSTRequest
 import com.posdata.app.data.remote.request.UserPOSTRequest
 import com.posdata.app.data.remote.response.LocalUserDELETEResponse
 import com.posdata.app.data.remote.response.LocalUserPATCHResponse
+import com.posdata.app.data.remote.response.SMSGETResponse
+import com.posdata.app.data.remote.response.SMSPOSTResponse
 import com.posdata.app.data.remote.response.UserPOSTResponse
 import retrofit2.Response
 import retrofit2.http.Body
@@ -42,6 +45,8 @@ interface LocalApiService {
 interface CloudApiService {
     @DELETE("user")
     suspend fun deleteUser(@Query("user_id") userId: String): Response<Unit>
+    @GET("sms")
+    suspend fun getSMS(@Query("user_id") userId: String, @Query("execution_id") executionId: String): Response<SMSGETResponse>
     @GET("user")
     suspend fun getUser(@Query("user_id") userId: String): Response<UserGETResponse>
     @PATCH("user/profile")
@@ -50,6 +55,8 @@ interface CloudApiService {
     suspend fun patchTrustedContacts(@Query("user_id") userId: String, @Body request: TrustedContactsPATCHRequest): Response<Unit>
     @PATCH("user/preferences")
     suspend fun patchPreferences(@Query("user_id") userId: String, @Body request: PreferencesPATCHRequest): Response<Unit>
+    @POST("sms")
+    suspend fun postSMS(@Query("user_id") userId: String, @Body request: SMSPOSTRequest): Response<SMSPOSTResponse>
     @POST("user")
     suspend fun postUser(@Body request: UserPOSTRequest): Response<UserPOSTResponse>
 }

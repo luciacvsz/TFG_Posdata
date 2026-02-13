@@ -8,7 +8,7 @@ import com.google.gson.reflect.TypeToken
 import com.posdata.app.model.* import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-val Context.dataStore by preferencesDataStore(name = "posdata_preferences")
+val Context.dataStore by preferencesDataStore(name = "posdata_user_data")
 
 class UserInfo(private val context: Context) {
 

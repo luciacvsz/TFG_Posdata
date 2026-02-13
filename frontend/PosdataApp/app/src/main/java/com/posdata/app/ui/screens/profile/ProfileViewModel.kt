@@ -103,7 +103,7 @@ class ProfileViewModelFactory(private val context: Context) : ViewModelProvider.
             val cloudApi = RetrofitClient.cloudInstance
 
             val userUpdateRepository = UserUpdateRepository(localApi, cloudApi, userInfo)
-            val logoutRepository = LogoutRepository(userInfo)
+            val logoutRepository = LogoutRepository(context, userInfo)
             val deleteAccountRepository = DeleteAccountRepository(localApi, cloudApi, userInfo)
 
             @Suppress("UNCHECKED_CAST")

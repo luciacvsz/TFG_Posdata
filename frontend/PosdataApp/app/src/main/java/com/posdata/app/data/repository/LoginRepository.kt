@@ -1,13 +1,16 @@
 package com.posdata.app.data.repository
 
+import android.content.Context
 import com.posdata.app.data.local.UserInfo
 import com.posdata.app.model.AppPreferences
 import com.posdata.app.model.Contact
 import com.posdata.app.data.remote.CloudApiService
 import com.posdata.app.data.remote.LocalApiService
 import com.posdata.app.data.remote.request.LoginPOSTRequest
+import com.posdata.app.sms.SMSReceiverManager
 
 class LoginRepository(
+    private val context: Context,
     private val localApi: LocalApiService,
     private val cloudApi: CloudApiService,
     private val userInfo: UserInfo
@@ -51,6 +54,8 @@ class LoginRepository(
                 preferences = preferences,
                 trustedContacts = trustedContacts
             )
+
+            SMSReceiverManager.enableReceiver(context)
 
             Result.success("Login completado")
 

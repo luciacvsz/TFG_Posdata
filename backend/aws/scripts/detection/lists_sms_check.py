@@ -161,7 +161,6 @@ def lambda_handler(event, context):
     '''
     try:
 
-        # 1. Parsing & validation
         user_id = event.get('user_id')
         message = event.get('message')
         sender = str(event.get('sender', UNKNOWN_SENDER)).strip()
@@ -177,18 +176,15 @@ def lambda_handler(event, context):
             "reason": "Not found in any list",
         }
         
-        # 2. Content Hash Check
         if hash_result := hash_check(message):
             response.update(hash_result)
             return response
 
-        # 3. URL Analysis
         urls = list(set(extract_urls(message)))
         if url_result := url_check(urls, message):
             response.update(url_result)
             return response
 
-        # 4. Sender Check
         if sender_result := sender_check(sender):
             response.update(sender_result)
             return response

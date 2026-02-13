@@ -57,7 +57,7 @@ class LoginViewModelFactory(private val context: Context) : ViewModelProvider.Fa
             val localAPi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
 
-            val repository = LoginRepository(localAPi, cloudApi, userInfo)
+            val repository = LoginRepository(context, localAPi, cloudApi, userInfo)
 
             @Suppress("UNCHECKED_CAST")
             return LoginViewModel(repository) as T
