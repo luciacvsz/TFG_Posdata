@@ -5,7 +5,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
     private const val LOCAL_URL = "http://10.0.2.2:3000/"
-    private const val CLOUD_URL = "miurl"
+    private const val CLOUD_URL = "https://w82baca113.execute-api.eu-west-3.amazonaws.com/test/"
 
     val localInstance: ApiService by lazy {
         Retrofit.Builder()

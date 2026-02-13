@@ -7,7 +7,6 @@ import com.posdata.app.model.TrustedContact
 
 data class UserPOSTRequest(
     @SerializedName("full_name") val fullName: String,
-    @SerializedName("contact") val contact: Contact,
-    @SerializedName("preferences") val preferences: AppPreferences,
-    @SerializedName("trusted_contacts") val trustedContacts: List<TrustedContact>
+    @SerializedName("phone_number") val phoneNumber: String,
+    @SerializedName("email") val email: String
 )

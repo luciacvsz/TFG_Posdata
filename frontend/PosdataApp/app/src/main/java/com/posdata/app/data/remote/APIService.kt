@@ -39,4 +39,5 @@ interface ApiService {
     suspend fun patchPreferences(@Query("user_id") userId: String, @Body request: PreferencesPATCHRequest): Response<Unit>
     @POST("user")
     suspend fun postUser(@Body request: UserPOSTRequest): Response<UserPOSTResponse>
+
 }

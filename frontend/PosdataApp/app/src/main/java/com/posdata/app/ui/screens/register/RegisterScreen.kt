@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -20,42 +19,45 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.posdata.app.R
-import com.posdata.app.data.repository.RegisterRepository
-import com.posdata.app.data.local.UserInfo
-import com.posdata.app.data.remote.RetrofitClient
-import com.posdata.app.ui.screens.login.PosdataInput
+import com.posdata.app.ui.components.PosdataInput
+import com.posdata.app.ui.components.PosdataPrimaryButton
+import com.posdata.app.ui.components.PosdataSimpleDialog
 import com.posdata.app.ui.theme.*
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen(onBackClick: () -> Unit) {
-    // Estados para guardar lo que escribe el usuario
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
+fun RegisterScreen(
+    viewModel: RegisterViewModel = viewModel(
+        factory = RegisterViewModelFactory (LocalContext.current)
+    ),
+    onBackClick: () -> Unit,
+    onRegisterSuccess: () -> Unit
+) {
+    val state = viewModel.state
 
-    val scope = rememberCoroutineScope ()
-    // El 'context' se necesita para mostrar los Toasts de Android
-    val context = LocalContext.current
-    val userInfo = remember { UserInfo(context) }
-    val repository = remember {
-        RegisterRepository(
-            localApi = RetrofitClient.localInstance,
-            cloudApi = RetrofitClient.cloudInstance,
-            userInfo = userInfo
-        )
+    var fullName by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    LaunchedEffect(state.isSuccess) {
+        if (state.isSuccess) {
+            onRegisterSuccess()
+        }
     }
 
-    // Estado del scroll (VITAL para pantallas con teclado abierto)
-    val scrollState = rememberScrollState()
+    state.errorMessage?.let {
+        PosdataSimpleDialog(
+            title = "Error de registro",
+            message = it,
+            onDismiss = { viewModel.dismissError() }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -66,13 +68,13 @@ fun RegisterScreen(onBackClick: () -> Unit) {
                         onClick = {
                             onBackClick()
                         },
-                        modifier = Modifier.size(70.dp) // Área de toque grande
+                        modifier = Modifier.size(70.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver",
                             tint = PosdataBlue,
-                            modifier = Modifier.size(36.dp) // Flecha visualmente grande
+                            modifier = Modifier.size(36.dp)
                         )
                     }
                 },
@@ -84,13 +86,12 @@ fun RegisterScreen(onBackClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(paddingValues) // Respeta la barra superior
+                .padding(paddingValues)
                 .padding(horizontal = 24.dp)
-                .verticalScroll(scrollState), // Habilita el scroll
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // 1. LOGO
             Image(
                 painter = painterResource(id = R.drawable.logo_posdata),
                 contentDescription = "Logo",
@@ -100,29 +101,25 @@ fun RegisterScreen(onBackClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 2. TÍTULO (Alineado a la Izquierda)
             Text(
                 text = "Crear Cuenta",
-                style = MaterialTheme.typography.titleLarge, // SORA Bold
+                style = MaterialTheme.typography.titleLarge,
                 color = PosdataBlackText,
-                textAlign = TextAlign.Start, // Alineación del texto
+                textAlign = TextAlign.Start,
                 modifier = Modifier
-                    .fillMaxWidth() // Ocupa todo el ancho para poder alinearse a la izquierda
+                    .fillMaxWidth()
                     .padding(bottom = 24.dp)
             )
 
-            // 3. CAMPO NOMBRE
             PosdataInput(
                 label = "Nombre",
                 placeholder = "Ej: Juan Pérez García",
-                value = name,
-                onValueChange = { name = it },
-                keyboardType = KeyboardType.Text
+                value = fullName,
+                onValueChange = { fullName = it }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 4. CAMPO EMAIL (Teclado con @)
             PosdataInput(
                 label = "Correo Electrónico",
                 placeholder = "tu@email.com",
@@ -133,18 +130,16 @@ fun RegisterScreen(onBackClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 5. CAMPO TELÉFONO (Teclado Numérico)
             PosdataInput(
                 label = "Teléfono",
                 placeholder = "+34 600 000 000",
-                value = phone,
-                onValueChange = { phone = it },
+                value = phoneNumber,
+                onValueChange = { phoneNumber = it },
                 keyboardType = KeyboardType.Phone
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 6. CAMPO CONTRASEÑA
             PosdataInput(
                 label = "Contraseña",
                 placeholder = "Ingresa tu contraseña",
@@ -155,86 +150,13 @@ fun RegisterScreen(onBackClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 7. BOTÓN DE REGISTRO (Con Degradado)
-            Button(
-                onClick = {
+            PosdataPrimaryButton(
+                text = "Crear Cuenta",
+                onClick = { viewModel.register(fullName, phoneNumber, email, password) },
+                isLoading = state.isRegistering
+            )
 
-                    isLoading = true
-
-                    scope.launch {
-                        val result = repository.performRegistration(name, email, phone, password)
-
-                        result.onSuccess { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                        }.onFailure { error -> Toast.makeText(context, error.message, Toast.LENGTH_LONG).show() }
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                contentPadding = PaddingValues()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(PosdataLightBlue, PosdataBlue)
-                            )
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Crear Cuenta",
-                        style = MaterialTheme.typography.labelLarge, // DM Sans Bold
-                        color = PosdataBlackText
-                    )
-                }
-            }
-
-            // Espacio extra al final
             Spacer(modifier = Modifier.height(32.dp))
         }
-    }
-}
-
-// --- COMPONENTE REUTILIZABLE OPTIMIZADO ---
-@Composable
-fun PosdataInput(
-    label: String,
-    placeholder: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    isPassword: Boolean = false,
-    keyboardType: KeyboardType = KeyboardType.Text
-) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            // Usamos labelLarge (Sora Bold 20sp) o titleMedium según tu Type.kt
-            style = MaterialTheme.typography.labelLarge,
-            color = PosdataBlackText,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = { Text(placeholder, color = PosdataMutedText) },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            textStyle = MaterialTheme.typography.bodyLarge, // Texto grande (18sp)
-            visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = PosdataGreyBorder,
-                focusedBorderColor = PosdataBlue,
-                focusedContainerColor = PosdataSurface, // Fondo blanco
-                unfocusedContainerColor = PosdataSurface,
-                cursorColor = PosdataBlue
-            ),
-            singleLine = true
-        )
     }
 }

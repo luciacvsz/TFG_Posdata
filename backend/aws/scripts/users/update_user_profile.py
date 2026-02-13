@@ -66,7 +66,7 @@ def dynamodb_update_profile(user_id, updates):
 
     DB_MAPPING = {
         'full_name': 'FULL_NAME',
-        'phone-number': 'CONTACT.phone_number',
+        'phone_number': 'CONTACT.phone_number',
         'email': 'CONTACT.email'
     }
     
@@ -119,7 +119,7 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        query_params = event.get('queryStringparameters', {})
+        query_params = event.get('queryStringParameters', {})
         user_id = query_params.get('user_id') if query_params else None
 
         if not user_id:

@@ -19,29 +19,36 @@ sealed class ProfileUiState {
     data class Error(val message: String) : ProfileUiState()
 }
 
-class ProfileViewModel(private val repository: UserRepository, private val userInfo: UserInfo) : ViewModel() {
+enum class ProfileField { FULL_NAME, PHONE_NUMBER, EMAIL, PASSWORD }
+
+class ProfileViewModel(
+    private val repository: UserRepository,
+    private val userInfo: UserInfo
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Idle)
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
-    fun updateProfile(
-        newName: String? = null,
-        newPhone: String? = null,
-        newEmail: String? = null
+    fun updateProfileField(
+        field: ProfileField,
+        newValue: String
     ) {
+        if (newValue.isBlank()) return
+
         viewModelScope.launch {
             _uiState.value = ProfileUiState.Loading
 
-            val result = repository.updateProfile(
-                fullName = newName,
-                phoneNumber = newPhone,
-                email = newEmail
-            )
+            val result = when (field) {
+                ProfileField.FULL_NAME -> repository.updateProfile(fullName = newValue)
+                ProfileField.PHONE_NUMBER -> repository.updateProfile(phoneNumber = newValue)
+                ProfileField.EMAIL -> repository.updateProfile(email = newValue)
+                ProfileField.PASSWORD -> repository.updateProfile(password = newValue)
+            }
 
             result.onSuccess {
                 _uiState.value = ProfileUiState.Success
             }.onFailure { error ->
-                _uiState.value = ProfileUiState.Error(error.message ?: "Error desconocido")
+                _uiState.value = ProfileUiState.Error(error.message ?: "Error al actualizar")
             }
         }
     }
@@ -52,7 +59,7 @@ class ProfileViewModel(private val repository: UserRepository, private val userI
         }
     }
 
-    fun resetState() {
+    fun dismissError() {
         _uiState.value = ProfileUiState.Idle
     }
 }

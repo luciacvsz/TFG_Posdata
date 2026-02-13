@@ -95,7 +95,7 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        query_params = event.get('queryStringparameters', {})
+        query_params = event.get('queryStringParameters', {})
         user_id = query_params.get('user_id') if query_params else None
 
         if not user_id:
@@ -105,7 +105,7 @@ def lambda_handler(event, context):
         if not body:
             raise ValueError("Request body is required.")
         
-        dynamodb_update_preferences(user_id, body)        
+        dynamodb_update_preferences(user_id, body['preferences'])        
 
         logger.info(f"Successfully updated preferences for user ID: {user_id}")
         return create_response({}, status_code=200)

@@ -15,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.posdata.app.ui.components.PosdataPrimaryButton
+import com.posdata.app.ui.components.PosdataStatCard
 import com.posdata.app.ui.theme.*
 
 @Composable
@@ -47,7 +49,7 @@ fun HomeContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            StatCard(
+            PosdataStatCard(
                 number = analyzedSms.toString(),
                 label = "SMS Analizados",
                 colorStart = PosdataLightBlue,
@@ -57,12 +59,12 @@ fun HomeContent(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            StatCard(
+            PosdataStatCard(
                 number = fraudSms.toString(),
                 label = "Amenazas\nBloqueadas",
                 colorStart = PosdataLightBlue,
                 colorEnd = PosdataBlue,
-                modifier = Modifier.height(170.dp) // <--- CAMBIO CLAVE: Más alta
+                modifier = Modifier.height(170.dp)
             )
         }
 
@@ -71,7 +73,7 @@ fun HomeContent(
         Column(
             modifier = Modifier
                 .padding(horizontal = 36.dp)
-                .padding(bottom = 24.dp), // Margen inferior
+                .padding(bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -81,65 +83,14 @@ fun HomeContent(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            Button(
-                onClick = { /* Lógica de llamada 112 */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(90.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PosdataRed,
-                    contentColor = Color.White
-                ),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Llamada de Emergencia", // Texto en una línea si cabe, o dos
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(60.dp))
-        }
-    }
-}
+            PosdataPrimaryButton(
+                text = "Llamada de Emergencia",
+                onClick = { /* Lógica 112 */ },
+                modifier = Modifier.height(90.dp),
+                colorOverride = PosdataRed
+            )
 
-@Composable
-fun StatCard(
-    number: String,
-    label: String,
-    colorStart: Color,
-    colorEnd: Color,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                brush = Brush.verticalGradient(colors = listOf(colorStart, colorEnd)),
-                shape = RoundedCornerShape(28.dp)
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = number,
-                fontFamily = SoraFontFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 60.sp,
-                color = Color.White
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.titleMedium,
-                fontSize = 18.sp,
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.SemiBold
-            )
+            Spacer(modifier = Modifier.height(60.dp))
         }
     }
 }

@@ -8,7 +8,7 @@ import com.google.gson.reflect.TypeToken
 import com.posdata.app.model.* import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-val Context.dataStore by preferencesDataStore(name = "posdata_settings")
+val Context.dataStore by preferencesDataStore(name = "posdata_preferences")
 
 class UserInfo(private val context: Context) {
 
@@ -151,8 +151,9 @@ class UserInfo(private val context: Context) {
     }
 
     private inline fun <reified T : Enum<T>> enumValueOfOrNull(name: String?): T? {
+        if (name == null) return null
         return try {
-            if (name != null) enumValueOf<T>(name) else null
+            java.lang.Enum.valueOf(T::class.java, name)
         } catch (e: Exception) { null }
     }
 }

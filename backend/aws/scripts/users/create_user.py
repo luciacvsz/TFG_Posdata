@@ -23,12 +23,12 @@ USERS_TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
 REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 
 # Constants
-VALID_PREFERENCES = {
-    'font_size': {e.value for e in preferences.FontSize},
-    'notification_sound': {e.value for e in preferences.NotificationSound},
-    'color_scheme': {e.value for e in preferences.ColorScheme},
-    'exhaustivity': {e.value for e in preferences.Exhaustivity},
-    'explanation_mode': {e.value for e in preferences.ExplanationMode}
+DEFAULT_PREFERENCES = {
+    'font_size': preferences.FontSize.REGULAR.value,
+    'notification_sound': preferences.NotificationSound.ON.value,
+    'color_scheme': preferences.ColorScheme.STANDARD.value,
+    'exhaustivity': preferences.Exhaustivity.REGULAR.value,
+    'explanation_mode': preferences.ExplanationMode.ON.value
 }
 
 # Initialize resources
@@ -54,28 +54,10 @@ def validate_user_data(body):
     ValueError
         If any required field is missing or invalid.
     '''        
-    contact = body['contact']
-    if contact['phone_number'] != 'NONE' and not is_valid_phone(contact['phone_number']):
+    if not is_valid_phone(body['phone_number']):
         raise ValueError("Phone number must be valid.")
-    
-    if contact['email'] != 'NONE' and not is_valid_email(contact['email']):
+    if not is_valid_email(body['email']):
         raise ValueError("Email must be valid.")
-    
-    prefs = body['preferences']
-    for key, valid_values in VALID_PREFERENCES.items():
-        if key not in prefs:
-            raise ValueError(f"Missing required preference: {key}")
-        if prefs[key] not in valid_values:
-            raise ValueError(f"Invalid value for {key}: {prefs[key]}")
-        
-    trusted_contacts = body['trusted_contacts']
-    for contact in trusted_contacts:
-        if contact['phone_number'] != 'NONE' and not is_valid_phone(contact['phone_number']):
-            raise ValueError("All phone numbers in trusted contacts must be valid.")
-        if contact['email'] != 'NONE' and not is_valid_email(contact['email']):
-            raise ValueError("All emails in trusted contacts must be valid.")
-
-    return body
 
 def dynamodb_insertion(user_id, data):
     '''
@@ -86,22 +68,28 @@ def dynamodb_insertion(user_id, data):
         user_id : str
             The primary key of the user.
         data : dict
-            The user data containing full_name, contact, preferences, and trusted_contacts.
+            The user data containing full_name, phone_number and email.
 
     Raises
     ------
         ClientError
             If there is an error inserting the item into DynamoDB.
     '''
+
+    contact = {
+        'phone_number': data['phone_number'],
+        'email': data['email']
+    }
+
     try:
         table.put_item(
             Item={
                 'PK': user_id,
                 'ACTIVE': True,
                 'FULL_NAME': data['full_name'],
-                'CONTACT': data['contact'],
-                'PREFERENCES': data['preferences'],
-                'TRUSTED_CONTACTS': data.get('trusted_contacts', []),
+                'CONTACT': contact,
+                'PREFERENCES': DEFAULT_PREFERENCES,
+                'TRUSTED_CONTACTS': [],
                 'CREATED_AT': datetime.now(timezone.utc).isoformat()
             },
             ConditionExpression='attribute_not_exists(PK)'
@@ -135,10 +123,10 @@ def lambda_handler(event, context):
         if not body:
             raise ValueError("Request body is missing.")
     
-        validated_data = validate_user_data(body)
+        validate_user_data(body)
         user_id = create_user_id(table)
 
-        dynamodb_insertion(user_id, validated_data)
+        dynamodb_insertion(user_id, body)
 
         logger.info(f"Successfully created user ID: {user_id}")
         return create_response({'user_id': user_id}, status_code=201)

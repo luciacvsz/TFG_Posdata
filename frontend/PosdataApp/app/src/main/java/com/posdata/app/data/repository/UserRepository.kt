@@ -20,7 +20,8 @@ class UserRepository(
     suspend fun updateProfile(
         fullName: String? = null,
         phoneNumber: String? = null,
-        email: String? = null
+        email: String? = null,
+        password: String? = null
     ): Result<Boolean> {
         return try {
             val userId = getCurrentUserId() ?: throw Exception("Usuario no identificado")

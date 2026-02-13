@@ -52,6 +52,9 @@ class MainActivity : ComponentActivity() {
                                     LoginScreen(
                                         onRegisterClick = {
                                             authNavController.navigate(Screen.Register.route)
+                                        },
+                                        onLoginSuccess = {
+                                            authNavController.navigate(Screen.Home.route)
                                         }
                                     )
                                 }
@@ -60,6 +63,9 @@ class MainActivity : ComponentActivity() {
                                     RegisterScreen(
                                         onBackClick = {
                                             authNavController.popBackStack()
+                                        },
+                                        onRegisterSuccess = {
+                                            authNavController.navigate(Screen.Home.route)
                                         }
                                     )
                                 }

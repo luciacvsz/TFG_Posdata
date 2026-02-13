@@ -13,7 +13,7 @@ class RegisterRepository(
     private val cloudApi: ApiService,
     private val userInfo: UserInfo
 ) {
-    suspend fun performRegistration(fullName: String, email: String, phoneNumber: String, password: String ): Result<String> {
+    suspend fun performRegistration(fullName: String, phoneNumber: String, email: String, password: String ): Result<String> {
         return try {
             val localResp1 = localApi.postCheckEmail(CheckEmailPOSTRequest(email))
             val localData1 = localResp1.body()
@@ -24,19 +24,19 @@ class RegisterRepository(
                 return Result.failure(Exception(localData1?.message ?: "The user already has an account"))
             }
 
-            val contact = Contact(
-                phoneNumber = phoneNumber,
-                email = email
-            )
-
             val cloudData = try {
-                val cloudResp = cloudApi.postUser(UserPOSTRequest(fullName, contact, AppPreferences(), emptyList()))
+                val cloudResp = cloudApi.postUser(UserPOSTRequest(fullName, phoneNumber, email))
                 if (cloudResp.isSuccessful) cloudResp.body() else null
             } catch (e: Exception) {
                 return Result.failure(Exception("Ha ocurrido un error tratando de dar de alta al usuario en el cloud"))
             }
 
             val userId = cloudData?.userId
+
+            val contact = Contact(
+                phoneNumber = phoneNumber,
+                email = email
+            )
 
             val localResp2 = localApi.postRegister(RegisterPOSTRequest(userId, email, password))
             val localData2 = localResp2.body()

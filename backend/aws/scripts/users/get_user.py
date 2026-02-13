@@ -79,7 +79,7 @@ def lambda_handler(event, context):
             'full_name': user['FULL_NAME'],
             'contact': user['CONTACT'],
             'preferences': user['PREFERENCES'],
-            'trusted_contacts': user['TRUSTED_CONTACTS'][0] if user.get('TRUSTED_CONTACTS') else []
+            'trusted_contacts': user['TRUSTED_CONTACTS'] if user.get('TRUSTED_CONTACTS') else []
         }     
 
         logger.info(f"Successfully retrieved user ID: {user_id}")

@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,7 +31,6 @@ import com.posdata.app.ui.screens.preferences.PreferencesContent
 @Composable
 fun MainScreen(userData: UserData?) {
     val navController = rememberNavController()
-    val context = LocalContext.current
 
     Scaffold(
         bottomBar = {
