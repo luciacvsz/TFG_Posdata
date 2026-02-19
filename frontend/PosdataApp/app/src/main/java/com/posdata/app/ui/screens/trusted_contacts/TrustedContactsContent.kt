@@ -96,7 +96,6 @@ fun TrustedContactsContent(
                     style = MaterialTheme.typography.headlineLarge,
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Start,
-                    lineHeight = 60.sp,
                     modifier = Modifier.fillMaxWidth()
                 )
 

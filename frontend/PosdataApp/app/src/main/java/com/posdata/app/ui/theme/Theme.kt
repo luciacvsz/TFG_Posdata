@@ -5,6 +5,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import com.posdata.app.model.AppColorScheme
+import com.posdata.app.model.AppFontSize
 
 private val LightColorScheme = lightColorScheme(
     primary = LightPrimary,
@@ -172,6 +173,7 @@ private val GrayscaleColorScheme = lightColorScheme(
 @Composable
 fun PosdataAppTheme(
     colorScheme: AppColorScheme = AppColorScheme.LIGHT,
+    fontSize: AppFontSize = AppFontSize.REGULAR,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -184,9 +186,14 @@ fun PosdataAppTheme(
         AppColorScheme.GRAYSCALE -> GrayscaleColorScheme
     }
 
+    val activeTypography = when (fontSize) {
+        AppFontSize.REGULAR -> RegularTypography
+        AppFontSize.LARGE -> LargeTypography
+    }
+
     MaterialTheme(
         colorScheme = activeColorScheme,
-        typography = Typography,
+        typography = activeTypography,
         content = content
     )
 }

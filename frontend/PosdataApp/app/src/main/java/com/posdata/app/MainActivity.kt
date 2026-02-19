@@ -1,5 +1,6 @@
 package com.posdata.app
 
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,12 +14,16 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.PackageManagerCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.posdata.app.data.local.UserInfo
 import com.posdata.app.model.UserData
+import com.posdata.app.sms.SMSReceiverManager
 import com.posdata.app.ui.theme.PosdataAppTheme
 import com.posdata.app.ui.screens.login.LoginScreen
 import com.posdata.app.ui.screens.home.MainScreen
@@ -77,8 +82,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             val userData by userInfo.userData.collectAsState(initial = null)
             val currentColorScheme by preferencesViewModel.currentColorScheme.collectAsState()
+            val currentFontSize by preferencesViewModel.currentFontSize.collectAsState()
             PosdataAppTheme(
-                colorScheme = currentColorScheme
+                colorScheme = currentColorScheme,
+                fontSize = currentFontSize
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -91,6 +98,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+
     }
 }
 

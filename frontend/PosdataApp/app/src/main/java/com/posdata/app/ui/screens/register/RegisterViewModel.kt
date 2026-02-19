@@ -61,7 +61,7 @@ class RegisterViewModelFactory(private val context: Context) : ViewModelProvider
             val localAPi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
 
-            val repository = RegisterRepository(localAPi, cloudApi, userInfo)
+            val repository = RegisterRepository(context, localAPi, cloudApi, userInfo)
 
             @Suppress("UNCHECKED_CAST")
             return RegisterViewModel(repository) as T

@@ -12,10 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,7 +21,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.posdata.app.model.UserData
 import com.posdata.app.ui.navigation.Screen
-import com.posdata.app.ui.theme.*
 import com.posdata.app.ui.screens.profile.ProfileContent
 import com.posdata.app.ui.screens.trusted_contacts.TrustedContactsContent
 import com.posdata.app.ui.screens.preferences.PreferencesContent
@@ -50,9 +47,7 @@ fun MainScreen(
         ) {
             composable(Screen.Home.route) {
                 HomeContent(
-                    fullName = userData?.fullName ?: "Usuario",
-                    analyzedSms = 124,
-                    fraudSms = 3
+                    fullName = userData?.fullName ?: "Usuario"
                 )
             }
 
@@ -88,7 +83,6 @@ fun PosdataMainBottomBar(navController: NavController) {
         tonalElevation = 10.dp,
         modifier = Modifier.height(110.dp)
     ) {
-        // --- HOME ---
         NavigationBarItem(
             selected = currentRoute == Screen.Home.route,
             onClick = {
@@ -99,7 +93,13 @@ fun PosdataMainBottomBar(navController: NavController) {
                 }
             },
             icon = { Icon(Icons.Filled.Home, "Inicio", Modifier.size(32.dp)) },
-            label = { Text("Inicio", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+            label = {
+                Text(
+                    "Inicio",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = MaterialTheme.colorScheme.primary,
                 selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -119,7 +119,13 @@ fun PosdataMainBottomBar(navController: NavController) {
                 }
             },
             icon = { Icon(Icons.Filled.Person, "Perfil", Modifier.size(32.dp)) },
-            label = { Text("Perfil", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+            label = {
+                Text(
+                    "Perfil",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = MaterialTheme.colorScheme.primary,
                 selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -139,7 +145,13 @@ fun PosdataMainBottomBar(navController: NavController) {
                 }
             },
             icon = { Icon(Icons.Filled.Groups, "Contactos", Modifier.size(32.dp)) },
-            label = { Text("Contactos", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+            label = {
+                Text(
+                    "Contactos",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = MaterialTheme.colorScheme.primary,
                 selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -159,7 +171,13 @@ fun PosdataMainBottomBar(navController: NavController) {
                 }
             },
             icon = { Icon(Icons.Filled.Settings, "Ajustes", Modifier.size(32.dp)) },
-            label = { Text("Ajustes", fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+            label = {
+                Text(
+                    "Ajustes",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold
+                )
+            },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = MaterialTheme.colorScheme.primary,
                 selectedTextColor = MaterialTheme.colorScheme.primary,

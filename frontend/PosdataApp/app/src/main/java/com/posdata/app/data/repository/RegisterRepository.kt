@@ -1,5 +1,6 @@
 package com.posdata.app.data.repository
 
+import android.content.Context
 import com.posdata.app.data.local.UserInfo
 import com.posdata.app.model.AppPreferences
 import com.posdata.app.model.Contact
@@ -8,8 +9,10 @@ import com.posdata.app.data.remote.LocalApiService
 import com.posdata.app.data.remote.request.CheckEmailPOSTRequest
 import com.posdata.app.data.remote.request.RegisterPOSTRequest
 import com.posdata.app.data.remote.request.UserPOSTRequest
+import com.posdata.app.sms.SMSReceiverManager
 
 class RegisterRepository(
+    private val context: Context,
     private val localApi: LocalApiService,
     private val cloudApi: CloudApiService,
     private val userInfo: UserInfo
@@ -60,6 +63,8 @@ class RegisterRepository(
                 preferences = AppPreferences(),
                 trustedContacts = emptyList()
             )
+
+            SMSReceiverManager.enableReceiver(context)
 
             Result.success("Registro completado")
 
