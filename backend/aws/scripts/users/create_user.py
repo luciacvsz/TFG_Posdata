@@ -3,13 +3,13 @@ import json
 import logging
 import os
 from botocore.exceptions import ClientError
-import common.preferences as preferences
+from common.preferences import DEFAULT_PREFERENCES
 from common.responses import create_response
-from common.utils import create_user_id
-from common.validators import is_valid_phone, is_valid_email
+from common.utils import create_user_id, extract_body
+from common.validators import is_valid_email, is_valid_phone
 from datetime import datetime, timezone
 
-#Setup logging
+# Setup logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -22,20 +22,11 @@ for var in REQUIRED_VARS:
 USERS_TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
 REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 
-# Constants
-DEFAULT_PREFERENCES = {
-    'font_size': preferences.FontSize.REGULAR.value,
-    'notification_sound': preferences.NotificationSound.ON.value,
-    'color_scheme': preferences.ColorScheme.STANDARD.value,
-    'exhaustivity': preferences.Exhaustivity.REGULAR.value,
-    'explanation_mode': preferences.ExplanationMode.ON.value
-}
-
 # Initialize resources
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 table = dynamodb.Table(USERS_TABLE_NAME)
 
-def validate_user_data(body):
+def validate_user_data(body: dict) -> None:
     '''
     Validates the user data from the request body.
 
@@ -43,11 +34,6 @@ def validate_user_data(body):
     ----------
     body : dict
         The request body containing user data.
-
-    Returns
-    -------
-    dict
-        The validated user data.
 
     Raises
     ------
@@ -59,7 +45,7 @@ def validate_user_data(body):
     if not is_valid_email(body['email']):
         raise ValueError("Email must be valid.")
 
-def dynamodb_insertion(user_id, data):
+def dynamodb_insertion(user_id: str, data: dict) -> None:
     '''
     Insert a new user into the DynamoDB table.
 
@@ -119,9 +105,7 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        body = json.loads(event.get('body', '{}'))
-        if not body:
-            raise ValueError("Request body is missing.")
+        body = extract_body(event)
     
         validate_user_data(body)
         user_id = create_user_id(table)

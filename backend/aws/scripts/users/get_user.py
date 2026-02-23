@@ -4,8 +4,9 @@ import logging
 import os
 from common.database import get_item_by_pk_sk
 from common.responses import create_response
+from common.utils import extract_query_param
 
-#Setup logging
+# Setup logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -22,7 +23,7 @@ REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 table = dynamodb.Table(USERS_TABLE_NAME)
 
-def dynamodb_get(user_id):
+def dynamodb_get(user_id: str) -> dict:
     '''
     Get an existing user from the DynamoDB table.
 
@@ -38,8 +39,6 @@ def dynamodb_get(user_id):
     ------
         ValueError
             If the user does not exist.
-        ClientError
-            If there is an error retrieving the item from DynamoDB.
     '''
 
     user = get_item_by_pk_sk(table, user_id)
@@ -67,11 +66,7 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        query_params = event.get('queryStringParameters', {})
-        user_id = query_params.get('user_id') if query_params else None
-
-        if not user_id:
-            raise ValueError("Missing required query parameter: user_id")
+        user_id = extract_query_param(event, 'user_id')
         
         user = dynamodb_get(user_id)
     

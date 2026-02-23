@@ -2,12 +2,12 @@ import re
 
 _EMAIL_PATTERN = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 _PHONE_PATTERN = re.compile(r'^(\+?[1-9]\d{1,14}|[0-9]{9,15})$')
-_HTTP = r"https?://[^\s]+"
-_WWW = r"www\.[^\s]+"
-_DOMAIN = r"((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?)"
-_URL_REGEX = re.compile(f"({_HTTP})|({_WWW})|({_DOMAIN})")
+_HTTP = r"https?://[^\s]+" # Simplified URL pattern for http and https
+_WWW = r"www\.[^\s]+" # Simplified URL pattern for www
+_DOMAIN = r"((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?)" # Simplified domain pattern with optional path
+_URL_REGEX = re.compile(f"({_HTTP})|({_WWW})|({_DOMAIN})") # Combined regex to match URLs in different formats
 
-def is_valid_email(email):
+def is_valid_email(email: str) -> bool:
     '''
     Validate if the provided email address is in a correct format.
 
@@ -25,7 +25,7 @@ def is_valid_email(email):
         return False
     return bool(_EMAIL_PATTERN.match(email))
 
-def is_valid_phone(phone):
+def is_valid_phone(phone: str) -> bool:
     '''
     Validate if the provided phone number is in a correct format.
 
@@ -43,9 +43,9 @@ def is_valid_phone(phone):
         return False
     return bool(_PHONE_PATTERN.match(phone))
 
-def extract_urls(message):
+def extract_urls(message: str) -> list:
     '''
-    extract all URLs from a given text message.
+    Extract all URLs from a given text message.
 
     Parameters
     ----------

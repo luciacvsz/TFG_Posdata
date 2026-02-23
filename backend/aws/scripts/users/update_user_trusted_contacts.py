@@ -2,11 +2,12 @@ import boto3
 import json
 import logging
 import os
-from botocore.exceptions import ClientError
+from common.database import update_active_user
 from common.responses import create_response
-from common.validators import is_valid_phone, is_valid_email
+from common.utils import extract_body, extract_query_param
+from common.validators import is_valid_email, is_valid_phone
 
-#Setup logging
+# Setup logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -23,7 +24,7 @@ REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 table = dynamodb.Table(USERS_TABLE_NAME)
 
-def validate_trusted_contacts_data(body):
+def validate_trusted_contacts_data(body: dict) -> None:
     '''
     Validate the user trusted contacts data.
 
@@ -45,7 +46,7 @@ def validate_trusted_contacts_data(body):
         if 'email' in contact and not is_valid_email(contact['email']):
             raise ValueError("All emails in trusted contacts must be valid.")
 
-def dynamodb_update_trusted_contacts(user_id, updates):
+def dynamodb_update_trusted_contacts(user_id: str, updates: dict) -> None:
     '''
     Update the user trusted contacts data in the DynamoDB table.
 
@@ -55,31 +56,13 @@ def dynamodb_update_trusted_contacts(user_id, updates):
             The primary key of the user.
         updates : dict
             Dictionary with fields to update.
-
-    Raises
-    ------
-        ValueError
-            If the user does not exist.
-        ClientError
-            If there is an error updating the item in DynamoDB.
     '''
-    try:
-        table.update_item(
-            Key={'PK': user_id},
-            UpdateExpression=f'SET  TRUSTED_CONTACTS = :val_list',
-            ConditionExpression='attribute_exists(PK) AND #active = :true_val',
-            ExpressionAttributeNames={
-                '#active': 'ACTIVE'
-            },
-            ExpressionAttributeValues={
-                ':true_val': True,
-                ':val_list': updates['trusted_contacts']
-            }
-        )
-    except ClientError as e:
-        if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
-            raise ValueError(f"User with ID {user_id} does not exist.")
-        raise
+    update_active_user(
+        table, user_id,
+        update_expression='SET TRUSTED_CONTACTS = :val_list',
+        expression_names={},
+        expression_values={':val_list': updates['trusted_contacts']}
+    )
 
 def lambda_handler(event, context):
     '''
@@ -100,15 +83,8 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        query_params = event.get('queryStringParameters', {})
-        user_id = query_params.get('user_id') if query_params else None
-
-        if not user_id:
-            raise ValueError("Missing required query parameter: user_id")
-
-        body = json.loads(event.get('body', '{}'))
-        if not body:
-            raise ValueError("Request body is required.")
+        user_id = extract_query_param(event, 'user_id')
+        body = extract_body(event)
 
         validate_trusted_contacts_data(body)
         

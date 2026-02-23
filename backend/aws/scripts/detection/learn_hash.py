@@ -4,10 +4,10 @@ import logging
 import os
 from botocore.exceptions import ClientError
 from common.security import get_sha512_hash
-from datetime import datetime , timezone
-from typing import List, Dict
+from datetime import datetime, timezone
+from typing import Dict, List
 
-#Setup logging
+# Setup logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -27,7 +27,7 @@ PARTITION_KEY = 'BLACKLIST_HASH'
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 table = dynamodb.Table(LISTS_TABLE_NAME)
 
-def store_hash(message_hash, reason):
+def store_hash(message_hash: str, reason: str) -> bool:
     '''
     Store the SHA-512 hash of a message into the DynamoDB table.
 
@@ -57,7 +57,7 @@ def store_hash(message_hash, reason):
         logger.error(f"Failed to store hash: {ce}")
         return False
 
-def process_message(payload):
+def process_message(payload: dict) -> bool:
     '''
     Process the incoming payload to store the SHA-512 hash of the message in DynamoDB.
 
@@ -107,7 +107,7 @@ def lambda_handler(event, context):
         try:
             body_str = record.get('body')
             if not body_str:
-                logger.error(f"Record with messageId {mid} has no body. Skipping.")
+                logger.warning(f"Record with messageId {mid} has no body. Skipping.")
                 continue
 
             payload = json.loads(body_str)

@@ -4,7 +4,7 @@ import logging
 import os
 from botocore.exceptions import ClientError
 from common.database import get_item_by_pk_sk
-from common.notification import sms_trusted_contact_notification_message, email_trusted_contact_notification_message, Verdict
+from common.notification import email_trusted_contact_notification_message, sms_trusted_contact_notification_message, Verdict
 from datetime import datetime, timezone
 
 # Setup logging
@@ -30,7 +30,7 @@ users_table = dynamodb.Table(USERS_TABLE_NAME)
 sns = boto3.client('sns', region_name=REGION_NAME)
 ses = boto3.client('ses', region_name=REGION_NAME)
 
-def store_notification_in_s3(info, user_id, execution_id):
+def store_notification_in_s3(info: dict, user_id: str, execution_id: str) -> str:
     '''
     Stores the notification information in S3.
 
@@ -40,6 +40,8 @@ def store_notification_in_s3(info, user_id, execution_id):
         The notification information to store.
     user_id : str
         The user ID associated with the notification.
+    execution_id : str
+        The execution ID for the notification.
 
     Returns
     -------
@@ -67,7 +69,72 @@ def store_notification_in_s3(info, user_id, execution_id):
         logger.error(f"Failed to store notification in S3 for user: {user_id}")
         raise
 
-def notify_trusted_contacts(info, user_id):
+def _send_sms_notifications(phone_numbers: list, sms_body: str, user_id: str) -> None:
+    '''
+    Send SMS notifications to a list of phone numbers.
+
+    Parameters
+    ----------
+    phone_numbers : list
+        List of phone numbers to notify.
+    sms_body : str
+        The SMS message body.
+    user_id : str
+        The user ID associated with the notification, for logging purposes.
+    '''
+    for number in phone_numbers:
+        try:
+            sns.publish(
+                PhoneNumber=number,
+                Message=sms_body,
+                MessageAttributes={
+                    'AWS.SNS.SMS.SMSType': {
+                        'DataType': 'String',
+                        'StringValue': 'Transactional'
+                    },
+                    'AWS.SNS.SMS.SenderID': {
+                        'DataType': 'String',
+                        'StringValue': SMS_SENDER_ID
+                    }
+                }
+            )
+            logger.info(f"SMS sent successfully to {number}")
+        except Exception as e:
+            logger.error(f"Failed to send SMS to {number}: {e}")
+
+
+def _send_email_notifications(emails: list, email_content: dict, user_id: str) -> None:
+    '''
+    Send email notifications to a list of email addresses.
+
+    Parameters
+    ----------
+    emails : list
+        List of email addresses to notify.
+    email_content : dict
+        The email content containing subject, html and text fields.
+    user_id : str
+        The user ID associated with the notification, for logging purposes.
+    '''
+    for email in emails:
+        try:
+            ses.send_email(
+                Source=SOURCE_EMAIL,
+                Destination={'ToAddresses': [email]},
+                Message={
+                    'Subject': {'Data': email_content['subject']},
+                    'Body': {
+                        'Html': {'Data': email_content['html']},
+                        'Text': {'Data': email_content['text']}
+                    }
+                }
+            )
+            logger.info(f"Email sent successfully to {email}")
+        except Exception as e:
+            logger.error(f"Failed to send email to {email}: {e}")
+
+
+def notify_trusted_contacts(info: dict, user_id: str) -> None:
     '''
     Notifies the trusted contacts of a user via SMS and email.
 
@@ -87,59 +154,23 @@ def notify_trusted_contacts(info, user_id):
     if not user_info:
         logger.error(f"User not found: {user_id}")
         return
-    
+
     full_name = user_info.get('FULL_NAME', 'User')
     verdict = info.get('verdict')
-    trusted_contacts = user_info.get('TRUSTED_CONTACTS', {})
+    trusted_contacts = user_info.get('TRUSTED_CONTACTS', [])
 
-    phone_numbers = []
-    emails = []
-    for contact in trusted_contacts:
-        if contact.get('phone_number') != "NONE":
-            phone_numbers.append(contact['phone_number'])
-        if contact.get('email') != "NONE":
-            emails.append(contact['email'])
+    phone_numbers = [c['phone_number'] for c in trusted_contacts if c.get('phone_number') != "NONE"]
+    emails = [c['email'] for c in trusted_contacts if c.get('email') != "NONE"]
 
-    if phone_numbers != []:
+    if phone_numbers:
         sms_body = sms_trusted_contact_notification_message(full_name, verdict)
-        for number in phone_numbers:
-            try:
-                sns.publish(
-                    PhoneNumber=number,
-                    Message=sms_body,
-                    MessageAttributes={
-                        'AWS.SNS.SMS.SMSType': {
-                            'DataType': 'String',
-                            'StringValue': 'Transactional'
-                        },
-                        'AWS.SNS.SMS.SenderID': {
-                            'DataType': 'String',
-                            'StringValue': SMS_SENDER_ID
-                        }
-                    }
-                )
-                logger.info(f"SMS sent successfully to {number}")
-            except Exception as e:
-                logger.error(f"Failed to send SMS to {number}: {e}")
-    
-    if emails != []:
+        _send_sms_notifications(phone_numbers, sms_body, user_id)
+
+    if emails:
         email_content = email_trusted_contact_notification_message(full_name, verdict)
-        for email in emails:
-            try:
-                ses.send_email(
-                    Source=SOURCE_EMAIL,
-                    Destination={'ToAddresses': [email]},
-                    Message={
-                        'Subject': {'Data': email_content['subject']},
-                        'Body': {
-                            'Html': {'Data': email_content['html']},
-                            'Text': {'Data': email_content['text']}
-                        }
-                    }
-                )
-                logger.info(f"Email sent successfully to {email}")
-            except Exception as e:
-                logger.error(f"Failed to send Email to {email}: {e}")
+        _send_email_notifications(emails, email_content, user_id)
+
+    logger.info(f"Notification summary for user {user_id}: {len(phone_numbers)} SMS and {len(emails)} email contacts processed.")
 
 def lambda_handler(event, context):
     '''
@@ -160,7 +191,7 @@ def lambda_handler(event, context):
             For any other errors during processing.
     '''
     try:
-        logger.info("Processing notification request.")
+        logger.info(f"Processing notification for user: {user_id} | Execution ID: {execution_id}")
 
         user_id = event.get('user_id')
         execution_id = event.get('execution_id')

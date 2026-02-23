@@ -1,13 +1,24 @@
-import json
 import boto3
+import json
+import logging
 import os
 from common.database import check_user_exists
 from common.responses import create_response
+from common.utils import extract_query_param
+
+# Setup logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 #Environment variables
+REQUIRED_VARS = ['RESULTS_BUCKET_NAME', 'USERS_TABLE_NAME']
+for var in REQUIRED_VARS:
+    if not os.environ.get(var):
+        raise RuntimeError(f"Missing required environment variable: {var}")
+    
 USERS_TABLE_NAME = os.environ.get('USERS_TABLE_NAME')
 RESULTS_BUCKET_NAME = os.environ.get('RESULTS_BUCKET_NAME')
-REGION_NAME = os.environ.get('REGION_NAME')
+REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 
 # Initialize DynamoDB resource and table
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
@@ -16,10 +27,10 @@ table = dynamodb.Table(USERS_TABLE_NAME)
 #Initialze S3 client
 s3 = boto3.client('s3', region_name=REGION_NAME)
 
-def get_user_sms_results(user_id, execution_id):
+def get_user_sms_results(user_id: str, execution_id: str) -> tuple:
     '''
-    Retrieve the oldest SMS check results for a given user from the S3 bucket.
-    
+    Retrieve the SMS check results for a given user and execution ID from the S3 bucket.  
+      
     Parameters
     ----------
     user_id : str
@@ -39,7 +50,7 @@ def get_user_sms_results(user_id, execution_id):
 
     return content, file_key
 
-def delete_notification(file_key):
+def delete_notification(file_key: str) -> None:
     '''
     Delete a notification from the S3 bucket.
 
@@ -65,16 +76,10 @@ def lambda_handler(event, context):
             The SMS check results for the user.
     '''
     try:
-        print("Processing get SMS check results request.")
+        logger.info(f"Received event: {json.dumps(event)}")
 
-        query_params = event.get('queryStringParameters', {})
-        user_id = query_params.get('user_id') if query_params else None
-        execution_id = query_params.get('execution_id') if query_params else None
-
-        if not user_id:
-            raise ValueError("Missing required query parameter: user_id")
-        if not execution_id:
-            raise ValueError("Missing required query parameter: execution_id")
+        user_id = extract_query_param(event, 'user_id')
+        execution_id = extract_query_param(event, 'execution_id')
 
         if not check_user_exists(user_id, table):
             raise ValueError("User ID is required and must exist.")
@@ -82,14 +87,15 @@ def lambda_handler(event, context):
         results, file_key = get_user_sms_results(user_id, execution_id)
         if results is None:
             raise ValueError("No SMS check results found for the user.")
-        print("SMS check results retrieved successfully. Deleting notification from S3.")
 
         delete_notification(file_key)
-        print("Notification deleted successfully.")
 
-        return create_response({'results': results})
+        logger.info("SMS check results retrieved and notification deleted successfully.")
+        return create_response({'results': results}, status_code=200)
     
     except ValueError as ve:
+        logger.warning(f"Validation error: {ve}")
         return create_response({'ValueError': str(ve)}, status_code=400)
     except Exception as e:
+        logger.error(f"System failure: {e}", exc_info=True)
         return create_response({'error': 'Internal server error'}, status_code=500)

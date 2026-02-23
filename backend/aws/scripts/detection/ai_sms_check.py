@@ -1,15 +1,12 @@
 import boto3
-import json
 import logging
-import os
-import sentencepiece
-import sys
-from common.notification import Verdict
 import numpy as np
 import onnxruntime as ort
+import os
+from common.notification import Verdict
 from transformers import XLMRobertaTokenizer
 
-#Setup logging
+# Setup logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -20,17 +17,18 @@ for var in REQUIRED_VARS:
         raise RuntimeError(f"Missing required environment variable: {var}")
 
 MODEL_BUCKET_NAME = os.environ.get('MODEL_BUCKET_NAME')
+REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 
 # Constants
 LOCAL_PATH = '/tmp/model'
 MODEL_FILE = 'model_quantized.onnx'
 
 # Initialize resources
-s3 = boto3.client('s3')
+s3 = boto3.client('s3', region_name=REGION_NAME)
 tokenizer = None
 ort_session = None
 
-def download_model_from_s3():
+def download_model_from_s3() -> None:
     '''
     Downloads the model files from the specified S3 bucket to the local path.
 
@@ -52,10 +50,10 @@ def download_model_from_s3():
                 logger.info(f"Downloading {f} from S3 bucket {MODEL_BUCKET_NAME}...")
                 s3.download_file(MODEL_BUCKET_NAME, f, dest)
             except Exception as e:
-                logger.error(f"Failed to download '{f}'")
+                logger.error(f"Failed to download '{f}': {e}", exc_info=True)
                 raise
 
-def init_inference_engine():
+def init_inference_engine() -> None:
     '''
     Initializes the tokenizer and ONNX inference session.
 
@@ -78,15 +76,15 @@ def init_inference_engine():
             ort_session = ort.InferenceSession(model_path, sess_options, providers=["CPUExecutionProvider"])
             logger.info("Inference engine ready.")
         except Exception as e:
-            logger.error(f"Error initializing inference engine.")
+            logger.error(f"Error initializing inference engine: {e}", exc_info=True)
             raise
 
 try:
     init_inference_engine()
 except Exception as e:
-    logger.error(f"Initial model load failure. Handler will attempt retry.")
+    logger.error(f"Initial model load failure. Handler will attempt retry.", exc_info=True)
 
-def softmax(x):
+def softmax(x: np.ndarray) -> np.ndarray:
     '''
     Computes the softmax function for the given input array.
 
@@ -166,5 +164,5 @@ def lambda_handler(event, context):
         return output_payload
 
     except Exception as e:
-        logger.error(f"Inference failure", exc_info=True)
+        logger.error(f"Inference failure for user {user_id} | Execution ID: {event.get('execution_id')}", exc_info=True)
         return {"verdict": Verdict.UNKNOWN.value, "reason": "Internal AI inference error"}

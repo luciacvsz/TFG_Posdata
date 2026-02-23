@@ -2,7 +2,7 @@ from enum import Enum
 
 class Verdict(Enum):
     '''
-    Enum for verdict preferences.
+    Enum for SMS verdict values.
 
     Values:
     - SAFE: The item is safe.
@@ -15,18 +15,7 @@ class Verdict(Enum):
     SUSPICIOUS = 'suspicious'
     UNKNOWN = 'unknown'
 
-class ContactMethod(Enum):
-    '''
-    Enum for contact method preferences.
-
-    Values:
-    - SMS: Contact via SMS.
-    - EMAIL: Contact via Email.
-    '''
-    SMS = 'SMS'
-    EMAIL = 'Email'
-
-def sms_trusted_contact_notification_message(full_name, verdict):
+def sms_trusted_contact_notification_message(full_name: str, verdict: str) -> str:
     '''
     Generate an SMS notification message for trusted contacts.
 
@@ -42,16 +31,13 @@ def sms_trusted_contact_notification_message(full_name, verdict):
         str
             The generated notification message.
     '''
-    message = None
-
+    if verdict not in [Verdict.SUSPICIOUS.value, Verdict.MALICIOUS.value]:
+        raise ValueError("Usupported verdict for SMS notification. Supported values are 'suspicious' and 'malicious'.")
     if verdict == Verdict.SUSPICIOUS.value:
-        message =  f"POSDATA - AVISO: El teléfono de {full_name} ha recibido un mensaje sospechoso. Te sugerimos llamarle para recordarle que no interactúe con él por seguridad."
-    elif verdict == Verdict.MALICIOUS.value:
-        message = f"POSDATA - URGENTE: El dispositivo de {full_name} acaba de recibir un mensaje malicioso. Por favor, contacta con él/ella inmediatamente para evitar que acceda."
+        return f"POSDATA - AVISO: El teléfono de {full_name} ha recibido un mensaje sospechoso. Te sugerimos llamarle para recordarle que no interactúe con él por seguridad."
+    return f"POSDATA - URGENTE: El dispositivo de {full_name} acaba de recibir un mensaje malicioso. Por favor, contacta con él/ella inmediatamente para evitar que acceda."
 
-    return message
-
-def email_trusted_contact_notification_message(full_name, verdict):
+def email_trusted_contact_notification_message(full_name: str, verdict: str) -> dict:
     '''
     Generate an Email notification content (Subject and HTML Body) for trusted contacts.
 
@@ -70,8 +56,8 @@ def email_trusted_contact_notification_message(full_name, verdict):
             - 'html': The HTML body of the email.
             - 'text': A plain text version (fallback).
     '''
-    message = None
-    
+    if verdict not in [Verdict.SUSPICIOUS.value, Verdict.MALICIOUS.value]:
+        raise ValueError("Usupported verdict for SMS notification. Supported values are 'suspicious' and 'malicious'.")
     if verdict == Verdict.SUSPICIOUS.value:
         subject = f"⚠️ Aviso de Seguridad: Actividad sospechosa - {full_name}"
         color_hex = "#F59E0B"

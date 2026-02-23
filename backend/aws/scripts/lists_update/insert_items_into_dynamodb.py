@@ -26,7 +26,7 @@ dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 table = dynamodb.Table(LISTS_TABLE_NAME)
 s3 = boto3.client('s3', region_name=REGION_NAME)
 
-def process_csv_and_upload(bucket, key):
+def process_csv_and_upload(bucket: str, key: str) -> int:
     '''
     Processes a CSV file from S3 and uploads its contents to DynamoDB.
 
@@ -93,8 +93,8 @@ def lambda_handler(event, context):
             A dictionary containing the status code and message of the operation.
     '''
     try:
-        logger.info(f"Received S3 event: {json.dumps(event)}")
-
+        logger.info(f"Received event: {json.dumps(event)}")
+        
         if 'Records' not in event:
             raise ValueError("Event does not contain 'Records' key.")
 
@@ -113,7 +113,7 @@ def lambda_handler(event, context):
         return create_response({'message': f'Successfully processed {total_processed} records from the provided files.'}, status_code=200)
     
     except ValueError as ve:
-        logger.error(f"Validation error: {ve}")
+        logger.warning(f"Validation error: {ve}")
         return create_response({'ValueError': str(ve)}, status_code=400)
     except Exception as e:
         logger.error(f"System failure: {e}", exc_info=True)

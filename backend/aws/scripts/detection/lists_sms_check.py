@@ -30,7 +30,7 @@ dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 table = dynamodb.Table(LISTS_TABLE_NAME)
 sqs = boto3.client('sqs', region_name=REGION_NAME)
 
-def hash_check(message):
+def hash_check(message: str) -> dict | None:
     '''
     Check if the SHA-512 hash of the message exists in the blacklist.
 
@@ -53,9 +53,10 @@ def hash_check(message):
         }
     return None
 
-def url_check(urls, message):
+def url_check(urls: list, message: str) -> dict | None:
     '''
     Checks URLs against blacklist and whitelist in the database.
+    Triggers asynchronous hash learning if a blacklisted URL is found.
 
     Parameters
     ----------
@@ -90,7 +91,7 @@ def url_check(urls, message):
     
     return None
 
-def trigger_hash_learning_async(message, reason):
+def trigger_hash_learning_async(message: str, reason: str) -> None:
     '''
     Trigger the asynchronous learning of a message hash by sending a message to the SQS queue.
 
@@ -110,7 +111,7 @@ def trigger_hash_learning_async(message, reason):
     except ClientError as ce:
         logger.error(f"Failed to send message to SQS for hash learning: {ce}")
 
-def sender_check(sender):
+def sender_check(sender: str) -> dict | None:
     '''
     Checks the sender against whitelist in the database.
 
@@ -188,12 +189,13 @@ def lambda_handler(event, context):
         if sender_result := sender_check(sender):
             response.update(sender_result)
             return response
-            
+        
+        logger.info(f"Successfully completed SMS list check for user: {user_id} | Execution ID: {execution_id} | Verdict: {response['verdict']}")
         return response
             
     except ValueError as ve:
         logger.warning(f"Validation error: {ve}")
         raise
     except Exception as e:
-        logger.error(f"System Failure: {e}", exc_info=True)
+        logger.error(f"System failure: {e}", exc_info=True)
         raise

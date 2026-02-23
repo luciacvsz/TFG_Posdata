@@ -1,7 +1,7 @@
 import hashlib
 
-def get_sha512_hash(text):
-    """
+def get_sha512_hash(text: str) -> str:
+    '''
     Get SHA-512 hash of the given text.
 
     Parameters
@@ -13,6 +13,6 @@ def get_sha512_hash(text):
     -------
     str
         The SHA-512 hash of the input text in hexadecimal format.
-    """
+    '''
     sha512_hash = hashlib.sha512(text.encode('utf-8')).hexdigest()
     return sha512_hash

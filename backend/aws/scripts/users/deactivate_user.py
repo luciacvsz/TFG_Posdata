@@ -4,8 +4,9 @@ import logging
 import os
 from botocore.exceptions import ClientError
 from common.responses import create_response
+from common.utils import extract_query_param
 
-#Setup logging
+# Setup logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
@@ -22,7 +23,7 @@ REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
 dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
 users_table = dynamodb.Table(USERS_TABLE_NAME)
 
-def dynamodb_deactivation(user_id):
+def dynamodb_deactivation(user_id: str) -> None:
     '''
     Deactivate a user in the DynamoDB tables.
 
@@ -77,16 +78,12 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        query_params = event.get('queryStringParameters', {})
-        user_id = query_params.get('user_id') if query_params else None
-
-        if not user_id:
-            raise ValueError("Missing required query parameter: user_id")
+        user_id = extract_query_param(event, 'user_id')
         
         dynamodb_deactivation(user_id)
 
         logger.info(f"Successfully deactivated user: {user_id}")
-        return create_response({}, status_code=200)
+        return create_response({}, status_code=204)
     
     except ValueError as ve:
         logger.warning(f"Validation error: {ve}")

@@ -62,3 +62,11 @@ class ExplanationMode(Enum):
     '''
     OFF = 'off'
     ON = 'on'
+
+DEFAULT_PREFERENCES = {
+    'font_size': FontSize.REGULAR.value,
+    'notification_sound': NotificationSound.ON.value,
+    'color_scheme': ColorScheme.STANDARD.value,
+    'exhaustivity': Exhaustivity.REGULAR.value,
+    'explanation_mode': ExplanationMode.ON.value
+}
