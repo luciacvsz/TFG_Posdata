@@ -16,7 +16,7 @@ const db = mysql.createConnection({
 
 db.connect((err) => {
   if (err) throw err;
-  console.log("✅ Conectado a la Base de Datos MySQL");
+  console.log("Connected to MySQL Database");
 });
 
 app.post("/api/login", (req, res) => {
@@ -26,9 +26,7 @@ app.post("/api/login", (req, res) => {
   db.query(sql, [email, password], (err, results) => {
     if (err) {
       console.error(err);
-      return res
-        .status(500)
-        .json({ success: false, message: "Error en el servidor" });
+      return res.status(500).json({ success: false, message: "Server error" });
     }
 
     if (results.length > 0) {

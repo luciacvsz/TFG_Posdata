@@ -1,5 +1,6 @@
 package com.posdata.app.data.remote
 
+import android.content.Context
 import com.posdata.app.data.remote.request.LoginPOSTRequest
 import com.posdata.app.data.remote.response.LoginPOSTResponse
 import com.posdata.app.data.remote.request.CheckEmailPOSTRequest
@@ -25,6 +26,13 @@ import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Query
+import java.util.Properties
+
+fun loadApiKey(context: Context): String {
+    val props = Properties()
+    context.assets.open("local.env").use { props.load(it) }
+    return props.getProperty("API_KEY") ?: "DUMMY_KEY"
+}
 
 interface LocalApiService {
     @DELETE("/api/user")

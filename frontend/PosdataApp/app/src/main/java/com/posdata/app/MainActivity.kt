@@ -22,6 +22,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.posdata.app.data.local.UserInfo
+import com.posdata.app.data.remote.RetrofitClient
+import com.posdata.app.data.remote.loadApiKey
 import com.posdata.app.model.UserData
 import com.posdata.app.sms.SMSReceiverManager
 import com.posdata.app.ui.theme.PosdataAppTheme
@@ -51,6 +53,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val apiKey = loadApiKey(this)
+        RetrofitClient.apiKey = apiKey
 
         userInfo = UserInfo(applicationContext)
 

@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.room.compiler)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -68,4 +69,9 @@ dependencies {
     implementation(libs.converter.gson)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.annotations)
+}
+
+configurations.all {
+    exclude(group = "com.intellij", module = "annotations")
 }
