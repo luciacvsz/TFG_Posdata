@@ -1,0 +1,14 @@
+{
+  "queryStringParameters": {
+    "user_id": "string"
+  },
+  "body": {
+    "preferences": {
+      "font_size": "string",
+      "color_scheme": "string",
+      "notification_sound": "string",
+      "exhaustivity": "string",
+      "explanation_mode": "string"
+    }
+  }
+}

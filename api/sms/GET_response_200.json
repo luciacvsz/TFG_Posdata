@@ -1,0 +1,15 @@
+{
+  "statusCode": 200,
+  "body": {
+    "results": {
+      "user_id": "string",
+      "execution_id": "string",
+      "sender": "string",
+      "message": "string",
+      "verdict": "safe | suspicious | malicious | unknown",
+      "reason": "string",
+      "details": "string",
+      "processed_at": "datetime string"
+    }
+  }
+}

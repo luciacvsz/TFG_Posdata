@@ -1,0 +1,6 @@
+{
+  "statusCode": 201,
+  "body": {
+    "user_id": "string"
+  }
+}

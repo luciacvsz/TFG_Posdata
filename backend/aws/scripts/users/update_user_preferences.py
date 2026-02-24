@@ -80,7 +80,7 @@ def lambda_handler(event, context):
         dynamodb_update_preferences(user_id, body['preferences'])        
 
         logger.info(f"Successfully updated preferences for user ID: {user_id}")
-        return create_response({}, status_code=200)
+        return create_response({}, status_code=204)
     
     except ValueError as ve:
         logger.warning(f"Validation error: {ve}")
