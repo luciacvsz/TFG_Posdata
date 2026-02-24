@@ -51,12 +51,10 @@ class RegisterRepository(
                 return Result.failure(Exception(localData2?.message ?: "Error while trying to insert user into local database"))
             }
 
-            val sessionToken = localData2.sessionToken
             val tokens = localData2.tokens
 
             userInfo.saveUserSession (
                 userId = userId,
-                sessionToken = sessionToken,
                 tokens = tokens,
                 fullName = fullName,
                 contact = contact,

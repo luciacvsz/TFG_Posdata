@@ -17,7 +17,6 @@ class UserInfo(private val context: Context) {
     companion object {
         val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
         val USER_ID = stringPreferencesKey("user_id")
-        val SESSION_TOKEN = stringPreferencesKey("session_token")
         val TOKENS = intPreferencesKey("tokens")
 
         val FULL_NAME = stringPreferencesKey("full_name")
@@ -35,7 +34,6 @@ class UserInfo(private val context: Context) {
 
     suspend fun saveUserSession(
         userId: String?,
-        sessionToken: String,
         tokens: Int,
         fullName: String,
         contact: Contact,
@@ -47,7 +45,6 @@ class UserInfo(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[IS_LOGGED_IN] = true
             prefs[USER_ID] = userId as String
-            prefs[SESSION_TOKEN] = sessionToken
             prefs[TOKENS] = tokens
 
             prefs[FULL_NAME] = fullName
@@ -141,7 +138,6 @@ class UserInfo(private val context: Context) {
         UserData(
             isLoggedIn = prefs[IS_LOGGED_IN] ?: false,
             userId = prefs[USER_ID] ?: "",
-            sessionToken = prefs[SESSION_TOKEN] ?: "",
             tokens = prefs[TOKENS] ?: 0,
             fullName = prefs[FULL_NAME] ?: "",
             contact = contact,

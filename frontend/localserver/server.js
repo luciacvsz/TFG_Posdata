@@ -35,21 +35,20 @@ app.post("/api/login", (req, res) => {
       if (user.is_active === 0) {
         return res.json({
           success: false,
-          message: "Usuario inactivo. Contacta al administrador.",
+          message: "Inactive account. Please contact support.",
         });
       }
 
       res.json({
         success: true,
-        message: "Login correcto",
+        message: "Correct login",
         user_id: user.user_id ? user.user_id.toString() : null,
-        session_token: "token_falso_12345",
         tokens: user.tokens || 0,
       });
     } else {
       res.json({
         success: false,
-        message: "Correo o contraseña incorrectos",
+        message: "Email or password incorrect",
       });
     }
   });
@@ -64,18 +63,18 @@ app.post("/api/check-email", (req, res) => {
       console.error(err);
       return res
         .status(500)
-        .json({ success: false, message: "Error de base de datos" });
+        .json({ success: false, message: "Database error" });
     }
 
     if (results.length > 0) {
       return res.json({
         success: true,
-        message: "El usuario ya existe",
+        message: "The user already exists",
       });
     } else {
       return res.json({
         success: false,
-        message: "Usuario disponible",
+        message: "The user does not exist",
       });
     }
   });
@@ -88,7 +87,7 @@ app.post("/api/register", (req, res) => {
   if (!user_id) {
     return res
       .status(400)
-      .json({ success: false, message: "Falta el user_id de la nube" });
+      .json({ success: false, message: "Missing user_id from cloud" });
   }
 
   const sql =
@@ -96,16 +95,16 @@ app.post("/api/register", (req, res) => {
 
   db.query(sql, [user_id, email, password], (err, result) => {
     if (err) {
-      console.error("Error al insertar:", err);
-      return res
-        .status(500)
-        .json({ success: false, message: "Error al crear usuario en local" });
+      console.error("Error while inserting user:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Error creating user in local database",
+      });
     }
 
     res.json({
       success: true,
-      message: "Registro completado con éxito",
-      session_token: "token_simulado_" + Date.now(),
+      message: "Registration successful",
       tokens: 100,
     });
   });
@@ -117,23 +116,23 @@ app.delete("/api/user", (req, res) => {
   if (!user_id) {
     return res
       .status(400)
-      .json({ success: false, message: "Falta el user_id de la nube" });
+      .json({ success: false, message: "Missing user_id from cloud" });
   }
 
   const sql = "DELETE FROM users WHERE user_id = ?";
 
   db.query(sql, [user_id], (err, result) => {
     if (err) {
-      console.error("Error al eliminar:", err);
+      console.error("Error while deleting user:", err);
       return res.status(500).json({
         success: false,
-        message: "Error al eliminar usuario en local",
+        message: "Error deleting user in local database",
       });
     }
 
     res.json({
       success: true,
-      message: "Usuario eliminado con éxito",
+      message: "User deleted successfully",
     });
   });
 });
@@ -145,7 +144,7 @@ app.patch("/api/user", (req, res) => {
   if (!user_id) {
     return res
       .status(400)
-      .json({ success: false, message: "Falta el user_id de la nube" });
+      .json({ success: false, message: "Missing user_id from cloud" });
   }
 
   if (email != undefined) {
@@ -153,16 +152,16 @@ app.patch("/api/user", (req, res) => {
 
     db.query(sqlEmail, [email, user_id], (err, result) => {
       if (err) {
-        console.error("Error al actualizar email:", err);
+        console.error("Error updating email:", err);
         return res.status(500).json({
           success: false,
-          message: "Error al actualizar email en local",
+          message: "Error updating email in local database",
         });
       }
 
       return res.json({
         success: true,
-        message: "Email actualizado con éxito",
+        message: "Email updated successfully",
       });
     });
   }
@@ -172,16 +171,16 @@ app.patch("/api/user", (req, res) => {
 
     db.query(sqlPassword, [password, user_id], (err, result) => {
       if (err) {
-        console.error("Error al actualizar contraseña:", err);
+        console.error("Error updating password:", err);
         return res.status(500).json({
           success: false,
-          message: "Error al actualizar contraseña en local",
+          message: "Error updating password in local database",
         });
       }
 
       return res.json({
         success: true,
-        message: "Contraseña actualizada con éxito",
+        message: "Password updated successfully",
       });
     });
   }
@@ -189,5 +188,5 @@ app.patch("/api/user", (req, res) => {
 
 const PORT = 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });

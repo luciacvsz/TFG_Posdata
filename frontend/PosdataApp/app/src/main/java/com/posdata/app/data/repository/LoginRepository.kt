@@ -27,7 +27,6 @@ class LoginRepository(
             val userId = localData.userId
                 ?: return Result.failure(Exception("Login correcto pero sin ID de usuario"))
 
-            val sessionToken = localData.sessionToken
             val tokens = localData.tokens
 
             val cloudData = try {
@@ -47,7 +46,6 @@ class LoginRepository(
 
             userInfo.saveUserSession(
                 userId = userId,
-                sessionToken = sessionToken,
                 tokens = tokens,
                 fullName = fullName,
                 contact = contact,
