@@ -17,7 +17,8 @@ class LoginRepository(
 ) {
     suspend fun performLoginAndSync(email: String, password: String): Result<String> {
         return try {
-            val localResp = localApi.postLogin(LocalLoginPOSTRequest(email, password))
+            val hashedPassword = HashUtils.sha512(password)
+            val localResp = localApi.postLogin(LocalLoginPOSTRequest(email, hashedPassword))
             val localData = localResp.body()
 
             if (!localResp.isSuccessful || localData == null || !localData.success) {

@@ -41,9 +41,10 @@ class UserUpdateRepository(
             }
 
             if (fullName == null && phoneNumber == null) {
+                val passwordToSave = password?.let { HashUtils.sha512(it)}
                 val localRequest = LocalProfilePATCHRequest(
                     email = email,
-                    password = password
+                    password = passwordToSave
                 )
 
                 val localResponse = localApi.patchUser(userId, localRequest)

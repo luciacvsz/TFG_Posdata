@@ -4,6 +4,8 @@ const cors = require("cors");
 const app = express();
 const PORT = 3000;
 const INITIAL_TOKENS = 100;
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
 
 app.use(cors());
 app.use(express.json());
@@ -17,7 +19,7 @@ const USER_GET_QUERY = "SELECT email FROM users WHERE email = ?";
 const USER_UPDATE_EMAIL_QUERY = "UPDATE users SET email = ? WHERE user_id = ?";
 const USER_PASSWORD_UPDATE_QUERY =
   "UPDATE users SET password = ? WHERE user_id = ?";
-const LOGIN_POST_QUERY = "SELECT * FROM users WHERE email = ? AND password = ?";
+const LOGIN_POST_QUERY = "SELECT * FROM users WHERE email = ?";
 const USER_POST_QUERY = `INSERT INTO users (user_id, email, password, tokens, is_active) VALUES (?, ?, ?, ${INITIAL_TOKENS}, 1)`;
 
 app.delete("/users/:user_id", (req, res) => {
@@ -76,51 +78,65 @@ app.patch("/users/:user_id", (req, res) => {
   const { user_id } = req.params;
   const { email, password } = req.body;
 
-  if (email != undefined) {
-    db.query(USER_UPDATE_EMAIL_QUERY, [email, user_id], (err, result) => {
-      if (err) {
-        console.error("Error updating email:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Error updating email in local database",
-        });
-      }
+  try {
+    if (email) {
+      db.query(USER_UPDATE_EMAIL_QUERY, [email, user_id], (err, result) => {
+        if (err) {
+          console.error("Error updating email:", err);
+          return res.status(500).json({
+            success: false,
+            message: "Error updating email in local database",
+          });
+        }
 
-      if (result.affectedRows != 1) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-      }
+        if (result.affectedRows != 1) {
+          return res.status(404).json({
+            success: false,
+            message: "User not found",
+          });
+        }
 
-      return res.json({
-        success: true,
-        message: "Email updated successfully",
+        return res.json({
+          success: true,
+          message: "Email updated successfully",
+        });
       });
-    });
-  }
+    }
 
-  if (password != undefined) {
-    db.query(USER_PASSWORD_UPDATE_QUERY, [password, user_id], (err, result) => {
-      if (err) {
-        console.error("Error updating password:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Error updating password in local database",
-        });
-      }
+    if (password) {
+      const secureHash = bcrypt.hash(password, saltRounds);
 
-      if (result.affectedRows != 1) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found",
-        });
-      }
+      db.query(
+        USER_PASSWORD_UPDATE_QUERY,
+        [secureHash, user_id],
+        (err, result) => {
+          if (err) {
+            console.error("Error updating password:", err);
+            return res.status(500).json({
+              success: false,
+              message: "Error updating password in local database",
+            });
+          }
 
-      return res.json({
-        success: true,
-        message: "Password updated successfully",
-      });
+          if (result.affectedRows != 1) {
+            return res.status(404).json({
+              success: false,
+              message: "User not found",
+            });
+          }
+
+          return res.json({
+            success: true,
+            message: "Password updated successfully",
+          });
+        },
+      );
+    }
+  } catch (err) {
+    console.error("Error processing password:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Error processing password",
     });
   }
 });
@@ -128,7 +144,7 @@ app.patch("/users/:user_id", (req, res) => {
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  db.query(LOGIN_POST_QUERY, [email, password], (err, results) => {
+  db.query(LOGIN_POST_QUERY, [email], (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({
@@ -151,10 +167,18 @@ app.post("/login", (req, res) => {
       });
     }
 
+    const match = bcrypt.compare(password, results[0].password);
+    if (!match) {
+      return res.json({
+        success: false,
+        message: "Email or password incorrect",
+      });
+    }
+
     res.json({
       success: true,
       message: "Correct login",
-      user_id: results[0].user_id ? results[0].user_id.toString() : null,
+      user_id: results[0].user_id,
       tokens: results[0].tokens || 0,
     });
   });
@@ -164,21 +188,31 @@ app.post("/users/:user_id", (req, res) => {
   const { user_id } = req.params;
   const { email, password } = req.body;
 
-  db.query(USER_POST_QUERY, [user_id, email, password], (err, result) => {
-    if (err) {
-      console.error("Error while inserting user:", err);
-      return res.status(500).json({
-        success: false,
-        message: "Error creating user in local database",
-      });
-    }
+  try {
+    const secureHash = bcrypt.hash(password, saltRounds);
 
-    res.json({
-      success: true,
-      message: "Registration successful",
-      tokens: INITIAL_TOKENS,
+    db.query(USER_POST_QUERY, [user_id, email, secureHash], (err, result) => {
+      if (err) {
+        console.error("Error while inserting user:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Error creating user in local database",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Registration successful",
+        tokens: INITIAL_TOKENS,
+      });
     });
-  });
+  } catch (err) {
+    console.error("Error hashing password:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Error processing password",
+    });
+  }
 });
 
 const db = mysql.createConnection({

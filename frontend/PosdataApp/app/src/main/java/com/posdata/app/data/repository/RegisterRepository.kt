@@ -38,13 +38,14 @@ class RegisterRepository(
             }
 
             val userId = cloudData.userId
+            val hashedPassword = HashUtils.sha512(password)
 
             val contact = Contact(
                 phoneNumber = phoneNumber,
                 email = email
             )
 
-            val localResp2 = localApi.postUser(userId, LocalUserPOSTRequest(email, password))
+            val localResp2 = localApi.postUser(userId, LocalUserPOSTRequest(email, hashedPassword))
             val localData2 = localResp2.body()
 
             if (!localResp2.isSuccessful || localData2 == null || !localData2.success) {
