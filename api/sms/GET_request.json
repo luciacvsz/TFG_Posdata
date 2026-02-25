@@ -1,6 +1,0 @@
-{
-  "queryStringParameters": {
-    "user_id": "string",
-    "execution_id": "string"
-  }
-}

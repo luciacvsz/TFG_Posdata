@@ -1,7 +1,4 @@
 {
-  "queryStringParameters": {
-    "user_id": "string"
-  },
   "body": {
     "preferences": {
       "font_size": "string",

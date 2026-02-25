@@ -3,7 +3,7 @@ package com.posdata.app.data.remote.request
 import com.google.gson.annotations.SerializedName
 import com.posdata.app.model.*
 
-data class PreferencesPATCHRequest(
+data class CloudPreferencesPATCHRequest(
     @SerializedName("preferences") val preferences: PreferencesDTO
 )
 

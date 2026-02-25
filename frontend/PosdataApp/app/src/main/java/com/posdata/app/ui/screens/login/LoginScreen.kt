@@ -95,17 +95,6 @@ fun LoginScreen(
             isLoading = state.isLogging
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(onClick = { /* TODO */ }) {
-            Text(
-                text = "¿Olvidaste tu contraseña?",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-
         Spacer(modifier = Modifier.height(24.dp))
 
         Row(

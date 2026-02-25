@@ -2,7 +2,7 @@ package com.posdata.app.data.remote.request
 
 import com.google.gson.annotations.SerializedName
 
-data class TrustedContactsPATCHRequest(
+data class CloudTrustedContactsPATCHRequest(
     @SerializedName("trusted_contacts")
     val trustedContacts: List<TrustedContactDTO>
 )

@@ -1,7 +1,4 @@
 {
-  "queryStringParameters": {
-    "user_id": "string"
-  },
   "body": {
     "full_name": "string",
     "phone_number": "string",

@@ -5,7 +5,7 @@ import com.posdata.app.model.AppPreferences
 import com.posdata.app.model.Contact
 import com.posdata.app.model.TrustedContact
 
-data class UserGETResponse(
+data class CloudUsersGETResponse(
     @SerializedName("full_name") val fullName: String,
     @SerializedName("contact") val contact: Contact,
     @SerializedName("preferences") val preferences: AppPreferences,

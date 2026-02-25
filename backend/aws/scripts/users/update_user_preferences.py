@@ -3,8 +3,8 @@ import json
 import logging
 import os
 from common.database import update_active_user
-from common.responses import extract_body, create_response
-from common.utils import extract_query_param
+from common.responses import create_response
+from common.utils import extract_body
 
 # Setup logging
 logger = logging.getLogger()
@@ -74,7 +74,7 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        user_id = extract_query_param(event, 'user_id')
+        user_id = event['pathParameters']['user_id']
         body = extract_body(event)
         
         dynamodb_update_preferences(user_id, body['preferences'])        

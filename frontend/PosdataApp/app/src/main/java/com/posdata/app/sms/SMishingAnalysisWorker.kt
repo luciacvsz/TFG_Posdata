@@ -11,7 +11,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.posdata.app.data.local.UserInfo
 import com.posdata.app.data.remote.RetrofitClient
-import com.posdata.app.data.remote.request.SMSPOSTRequest
+import com.posdata.app.data.remote.request.CloudSMSPOSTRequest
 import com.posdata.app.data.remote.response.ResultsDTO
 import com.posdata.app.data.remote.response.SMSGETResponse
 import com.posdata.app.model.AppExhaustivity
@@ -33,7 +33,7 @@ class SMishingAnalysisWorker(
 
         val userData = userInfo.userData.first()
 
-        if (!userData.isLoggedIn || userData.sessionToken.isEmpty()) {
+        if (!userData.isLoggedIn ) {
             return Result.failure()
         }
 
@@ -41,7 +41,7 @@ class SMishingAnalysisWorker(
         val message = inputData.getString("MESSAGE") ?: return Result.failure()
 
         return try {
-            val postResponse = cloudApi.postSMS(userData.userId, SMSPOSTRequest(sender, message))
+            val postResponse = cloudApi.postSMS(userData.userId, CloudSMSPOSTRequest(sender, message))
             if(!postResponse.isSuccessful || postResponse.body() == null) {
                 return Result.retry()
             }

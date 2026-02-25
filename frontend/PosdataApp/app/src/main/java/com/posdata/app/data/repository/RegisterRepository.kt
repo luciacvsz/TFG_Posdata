@@ -6,9 +6,9 @@ import com.posdata.app.model.AppPreferences
 import com.posdata.app.model.Contact
 import com.posdata.app.data.remote.CloudApiService
 import com.posdata.app.data.remote.LocalApiService
-import com.posdata.app.data.remote.request.CheckEmailPOSTRequest
-import com.posdata.app.data.remote.request.RegisterPOSTRequest
-import com.posdata.app.data.remote.request.UserPOSTRequest
+import com.posdata.app.data.remote.request.LocalUserPOSTRequest
+import com.posdata.app.data.remote.request.CloudUsersPOSTRequest
+import com.posdata.app.data.remote.request.LocalLoginPOSTRequest
 import com.posdata.app.sms.SMSReceiverManager
 
 class RegisterRepository(
@@ -19,7 +19,7 @@ class RegisterRepository(
 ) {
     suspend fun performRegistration(fullName: String, phoneNumber: String, email: String, password: String ): Result<String> {
         return try {
-            val localResp1 = localApi.postCheckEmail(CheckEmailPOSTRequest(email))
+            val localResp1 = localApi.getUser(email)
             val localData1 = localResp1.body()
 
             if (!localResp1.isSuccessful || localData1 == null) {
@@ -29,7 +29,7 @@ class RegisterRepository(
             }
 
             val cloudData = try {
-                val cloudResp = cloudApi.postUser(UserPOSTRequest(fullName, phoneNumber, email))
+                val cloudResp = cloudApi.postUser(CloudUsersPOSTRequest(fullName, phoneNumber, email))
                 val body = cloudResp.body()
                 if (!cloudResp.isSuccessful || body == null) throw Exception()
                 body
@@ -44,7 +44,7 @@ class RegisterRepository(
                 email = email
             )
 
-            val localResp2 = localApi.postRegister(userId, RegisterPOSTRequest(email, password))
+            val localResp2 = localApi.postUser(userId, LocalUserPOSTRequest(email, password))
             val localData2 = localResp2.body()
 
             if (!localResp2.isSuccessful || localData2 == null || !localData2.success) {

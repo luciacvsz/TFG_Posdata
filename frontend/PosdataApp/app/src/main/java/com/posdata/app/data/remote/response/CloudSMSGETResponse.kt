@@ -1,16 +1,8 @@
 package com.posdata.app.data.remote.response
 
 import com.google.gson.annotations.SerializedName
-import com.posdata.app.model.AppColorScheme
-import com.posdata.app.model.AppExhaustivity
-import com.posdata.app.model.AppExplanationMode
-import com.posdata.app.model.AppFontSize
-import com.posdata.app.model.AppNotificationSound
-import com.posdata.app.model.AppPreferences
-import com.posdata.app.model.Contact
-import com.posdata.app.model.TrustedContact
 
-data class SMSGETResponse(
+data class CloudSMSGETResponse(
     @SerializedName("results") val results: ResultsDTO,
 )
 

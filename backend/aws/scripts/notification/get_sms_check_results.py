@@ -4,7 +4,6 @@ import logging
 import os
 from common.database import check_user_exists
 from common.responses import create_response
-from common.utils import extract_query_param
 
 # Setup logging
 logger = logging.getLogger()
@@ -78,8 +77,8 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        user_id = extract_query_param(event, 'user_id')
-        execution_id = extract_query_param(event, 'execution_id')
+        user_id = event['pathParameters']['user_id']
+        execution_id = event['pathParameters']['execution_id']
 
         if not check_user_exists(user_id, table):
             raise ValueError("User ID is required and must exist.")

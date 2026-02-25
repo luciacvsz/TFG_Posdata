@@ -4,7 +4,7 @@ import logging
 import os
 from common.database import update_active_user
 from common.responses import create_response
-from common.utils import extract_body, extract_query_param
+from common.utils import extract_body
 from common.validators import is_valid_email, is_valid_phone
 
 # Setup logging
@@ -100,7 +100,7 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        user_id = extract_query_param(event, 'user_id')
+        user_id = event['pathParameters']['user_id']
         body = extract_body(event)
 
         validate_profile_data(body)

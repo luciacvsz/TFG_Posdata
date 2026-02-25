@@ -4,7 +4,6 @@ import logging
 import os
 from common.database import get_item_by_pk_sk
 from common.responses import create_response
-from common.utils import extract_query_param
 
 # Setup logging
 logger = logging.getLogger()
@@ -66,7 +65,7 @@ def lambda_handler(event, context):
     try:
         logger.info(f"Received event: {json.dumps(event)}")
 
-        user_id = extract_query_param(event, 'user_id')
+        user_id = event['pathParameters']['user_id']
         
         user = dynamodb_get(user_id)
     

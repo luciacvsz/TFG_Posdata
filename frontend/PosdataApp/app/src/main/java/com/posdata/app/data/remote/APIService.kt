@@ -1,30 +1,30 @@
 package com.posdata.app.data.remote
 
 import android.content.Context
-import com.posdata.app.data.remote.request.LoginPOSTRequest
-import com.posdata.app.data.remote.response.LoginPOSTResponse
-import com.posdata.app.data.remote.request.CheckEmailPOSTRequest
-import com.posdata.app.data.remote.request.TrustedContactsPATCHRequest
-import com.posdata.app.data.remote.response.CheckEmailPOSTResponse
-import com.posdata.app.data.remote.request.RegisterPOSTRequest
-import com.posdata.app.data.remote.response.RegisterPOSTResponse
-import com.posdata.app.data.remote.response.UserGETResponse
+import com.posdata.app.data.remote.request.CloudPreferencesPATCHRequest
+import com.posdata.app.data.remote.request.LocalLoginPOSTRequest
+import com.posdata.app.data.remote.response.LocalLoginPOSTResponse
+import com.posdata.app.data.remote.response.LocalUserGETResponse
+import com.posdata.app.data.remote.request.LocalUserPOSTRequest
+import com.posdata.app.data.remote.response.LocalUserPOSTResponse
+import com.posdata.app.data.remote.response.CloudUsersGETResponse
 import com.posdata.app.data.remote.request.CloudProfilePATCHRequest
 import com.posdata.app.data.remote.request.LocalProfilePATCHRequest
-import com.posdata.app.data.remote.request.PreferencesPATCHRequest
-import com.posdata.app.data.remote.request.SMSPOSTRequest
-import com.posdata.app.data.remote.request.UserPOSTRequest
+import com.posdata.app.data.remote.request.CloudSMSPOSTRequest
+import com.posdata.app.data.remote.request.CloudTrustedContactsPATCHRequest
+import com.posdata.app.data.remote.request.CloudUsersPOSTRequest
+import com.posdata.app.data.remote.response.CloudSMSGETResponse
 import com.posdata.app.data.remote.response.LocalUserDELETEResponse
 import com.posdata.app.data.remote.response.LocalUserPATCHResponse
-import com.posdata.app.data.remote.response.SMSGETResponse
-import com.posdata.app.data.remote.response.SMSPOSTResponse
-import com.posdata.app.data.remote.response.UserPOSTResponse
+import com.posdata.app.data.remote.response.CloudSMSPOSTResponse
+import com.posdata.app.data.remote.response.CloudUsersPOSTResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.Path
 import retrofit2.http.Query
 import java.util.Properties
 
@@ -35,36 +35,33 @@ fun loadApiKey(context: Context): String {
 }
 
 interface LocalApiService {
-    @DELETE("/api/user")
-    suspend fun deleteUser(@Query("user_id") userId: String): Response<LocalUserDELETEResponse>
-    @POST("/api/login")
-    suspend fun postLogin(@Body request: LoginPOSTRequest): Response<LoginPOSTResponse>
-
-    @POST("/api/check-email")
-    suspend fun postCheckEmail(@Body request: CheckEmailPOSTRequest): Response<CheckEmailPOSTResponse>
-
-    @POST("/api/register")
-    suspend fun postRegister(@Query("user_id") userId: String, @Body request: RegisterPOSTRequest): Response<RegisterPOSTResponse>
-
-    @PATCH("/api/user")
-    suspend fun patchUser(@Query("user_id") userId: String, @Body request: LocalProfilePATCHRequest): Response<LocalUserPATCHResponse>
+    @DELETE("/users/{user_id}")
+    suspend fun deleteUser(@Path("user_id") userId: String): Response<LocalUserDELETEResponse>
+    @GET("/users/{email}")
+    suspend fun getUser(@Path("email") email: String): Response<LocalUserGETResponse>
+    @PATCH("/users/{user_id}")
+    suspend fun patchUser(@Path("user_id") userId: String, @Body request: LocalProfilePATCHRequest): Response<LocalUserPATCHResponse>
+    @POST("/login")
+    suspend fun postLogin(@Body request: LocalLoginPOSTRequest): Response<LocalLoginPOSTResponse>
+    @POST("/users/{user_id}")
+    suspend fun postUser(@Path("user_id") userId: String, @Body request: LocalUserPOSTRequest): Response<LocalUserPOSTResponse>
 }
 
 interface CloudApiService {
-    @DELETE("user")
-    suspend fun deleteUser(@Query("user_id") userId: String): Response<Unit>
-    @GET("sms")
-    suspend fun getSMS(@Query("user_id") userId: String, @Query("execution_id") executionId: String): Response<SMSGETResponse>
-    @GET("user")
-    suspend fun getUser(@Query("user_id") userId: String): Response<UserGETResponse>
-    @PATCH("user/profile")
-    suspend fun patchProfile(@Query("user_id") userId: String, @Body request: CloudProfilePATCHRequest): Response<Unit>
-    @PATCH("user/trusted-contacts")
-    suspend fun patchTrustedContacts(@Query("user_id") userId: String, @Body request: TrustedContactsPATCHRequest): Response<Unit>
-    @PATCH("user/preferences")
-    suspend fun patchPreferences(@Query("user_id") userId: String, @Body request: PreferencesPATCHRequest): Response<Unit>
-    @POST("sms")
-    suspend fun postSMS(@Query("user_id") userId: String, @Body request: SMSPOSTRequest): Response<SMSPOSTResponse>
-    @POST("user")
-    suspend fun postUser(@Body request: UserPOSTRequest): Response<UserPOSTResponse>
+    @DELETE("users/{user_id}")
+    suspend fun deleteUser(@Path("user_id") userId: String): Response<Unit>
+    @GET("sms/{user_id}/{execution_id}")
+    suspend fun getSMS(@Path("user_id") userId: String, @Path("execution_id") executionId: String): Response<CloudSMSGETResponse>
+    @GET("users/{user_id}")
+    suspend fun getUser(@Path("user_id") userId: String): Response<CloudUsersGETResponse>
+    @PATCH("users/profile/{user_id}")
+    suspend fun patchProfile(@Path("user_id") userId: String, @Body request: CloudProfilePATCHRequest): Response<Unit>
+    @PATCH("users/trusted-contacts/{user_id}")
+    suspend fun patchTrustedContacts(@Path("user_id") userId: String, @Body request: CloudTrustedContactsPATCHRequest): Response<Unit>
+    @PATCH("users/preferences/{user_id}")
+    suspend fun patchPreferences(@Path("user_id") userId: String, @Body request: CloudPreferencesPATCHRequest): Response<Unit>
+    @POST("sms/{user_id}")
+    suspend fun postSMS(@Path("user_id") userId: String, @Body request: CloudSMSPOSTRequest): Response<CloudSMSPOSTResponse>
+    @POST("users")
+    suspend fun postUser(@Body request: CloudUsersPOSTRequest): Response<CloudUsersPOSTResponse>
 }

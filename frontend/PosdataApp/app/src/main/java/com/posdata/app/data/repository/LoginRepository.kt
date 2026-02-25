@@ -6,7 +6,7 @@ import com.posdata.app.model.AppPreferences
 import com.posdata.app.model.Contact
 import com.posdata.app.data.remote.CloudApiService
 import com.posdata.app.data.remote.LocalApiService
-import com.posdata.app.data.remote.request.LoginPOSTRequest
+import com.posdata.app.data.remote.request.LocalLoginPOSTRequest
 import com.posdata.app.sms.SMSReceiverManager
 
 class LoginRepository(
@@ -17,7 +17,7 @@ class LoginRepository(
 ) {
     suspend fun performLoginAndSync(email: String, password: String): Result<String> {
         return try {
-            val localResp = localApi.postLogin(LoginPOSTRequest(email, password))
+            val localResp = localApi.postLogin(LocalLoginPOSTRequest(email, password))
             val localData = localResp.body()
 
             if (!localResp.isSuccessful || localData == null || !localData.success) {

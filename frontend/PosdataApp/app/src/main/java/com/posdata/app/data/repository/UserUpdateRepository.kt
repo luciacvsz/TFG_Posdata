@@ -85,7 +85,7 @@ class UserUpdateRepository(
                 explanationMode = explanationMode
             )
 
-            val request = PreferencesPATCHRequest(preferences = preferencesDto)
+            val request = CloudPreferencesPATCHRequest(preferences = preferencesDto)
 
             val response = cloudApi.patchPreferences(userId, request)
             if (!response.isSuccessful){
@@ -119,7 +119,7 @@ class UserUpdateRepository(
                 )
             }
 
-            val request = TrustedContactsPATCHRequest(trustedContacts = dtos)
+            val request = CloudTrustedContactsPATCHRequest(trustedContacts = dtos)
 
             val response = cloudApi.patchTrustedContacts(userId, request)
             if (!response.isSuccessful) {

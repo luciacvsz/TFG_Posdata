@@ -1,7 +1,4 @@
 {
-  "queryStringParameters": {
-    "user_id": "string"
-  },
   "body": {
     "sender": "string",
     "message": "string"
