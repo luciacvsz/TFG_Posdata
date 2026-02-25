@@ -19,6 +19,8 @@ const USER_GET_QUERY = "SELECT email FROM users WHERE email = ?";
 const USER_UPDATE_EMAIL_QUERY = "UPDATE users SET email = ? WHERE user_id = ?";
 const USER_PASSWORD_UPDATE_QUERY =
   "UPDATE users SET password = ? WHERE user_id = ?";
+const USER_TOKENS_UPDATE_QUERY =
+  "UPDATE users SET tokens = ? WHERE user_id = ?";
 const LOGIN_POST_QUERY = "SELECT * FROM users WHERE email = ?";
 const USER_POST_QUERY = `INSERT INTO users (user_id, email, password, tokens, is_active) VALUES (?, ?, ?, ${INITIAL_TOKENS}, 1)`;
 
@@ -76,7 +78,7 @@ app.get("/users/:email", (req, res) => {
 
 app.patch("/users/:user_id", (req, res) => {
   const { user_id } = req.params;
-  const { email, password } = req.body;
+  const { email, password, tokens } = req.body;
 
   try {
     if (email) {
@@ -131,6 +133,30 @@ app.patch("/users/:user_id", (req, res) => {
           });
         },
       );
+    }
+
+    if (tokens) {
+      db.query(USER_TOKENS_UPDATE_QUERY, [tokens, user_id], (err, result) => {
+        if (err) {
+          console.error("Error updating tokens:", err);
+          return res.status(500).json({
+            success: false,
+            message: "Error updating tokens in local database",
+          });
+        }
+
+        if (result.affectedRows != 1) {
+          return res.status(404).json({
+            success: false,
+            message: "User not found",
+          });
+        }
+
+        return res.json({
+          success: true,
+          message: "Tokens updated successfully",
+        });
+      });
     }
   } catch (err) {
     console.error("Error processing password:", err);

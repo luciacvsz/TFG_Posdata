@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.posdata.app.data.local.UserInfo
 import com.posdata.app.data.remote.RetrofitClient
 import com.posdata.app.data.repository.LoginRepository
+import com.posdata.app.data.repository.TokenConsumptionRepository
 import kotlinx.coroutines.launch
 
 data class LoginState(
@@ -57,7 +58,9 @@ class LoginViewModelFactory(private val context: Context) : ViewModelProvider.Fa
             val localAPi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
 
-            val repository = LoginRepository(context, localAPi, cloudApi, userInfo)
+            val tokenConsumptionRepository = TokenConsumptionRepository(userInfo)
+
+            val repository = LoginRepository(context, localAPi, cloudApi, userInfo, tokenConsumptionRepository)
 
             @Suppress("UNCHECKED_CAST")
             return LoginViewModel(repository) as T

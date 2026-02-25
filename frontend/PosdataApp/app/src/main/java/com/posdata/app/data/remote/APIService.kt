@@ -9,7 +9,7 @@ import com.posdata.app.data.remote.request.LocalUserPOSTRequest
 import com.posdata.app.data.remote.response.LocalUserPOSTResponse
 import com.posdata.app.data.remote.response.CloudUsersGETResponse
 import com.posdata.app.data.remote.request.CloudProfilePATCHRequest
-import com.posdata.app.data.remote.request.LocalProfilePATCHRequest
+import com.posdata.app.data.remote.request.LocalUserPATCHRequest
 import com.posdata.app.data.remote.request.CloudSMSPOSTRequest
 import com.posdata.app.data.remote.request.CloudTrustedContactsPATCHRequest
 import com.posdata.app.data.remote.request.CloudUsersPOSTRequest
@@ -25,7 +25,6 @@ import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
-import retrofit2.http.Query
 import java.util.Properties
 
 fun loadApiKey(context: Context): String {
@@ -40,7 +39,7 @@ interface LocalApiService {
     @GET("/users/{email}")
     suspend fun getUser(@Path("email") email: String): Response<LocalUserGETResponse>
     @PATCH("/users/{user_id}")
-    suspend fun patchUser(@Path("user_id") userId: String, @Body request: LocalProfilePATCHRequest): Response<LocalUserPATCHResponse>
+    suspend fun patchUser(@Path("user_id") userId: String, @Body request: LocalUserPATCHRequest): Response<LocalUserPATCHResponse>
     @POST("/login")
     suspend fun postLogin(@Body request: LocalLoginPOSTRequest): Response<LocalLoginPOSTResponse>
     @POST("/users/{user_id}")

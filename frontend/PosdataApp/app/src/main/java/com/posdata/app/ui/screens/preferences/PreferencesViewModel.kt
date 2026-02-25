@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.posdata.app.data.local.UserInfo
 import com.posdata.app.data.remote.RetrofitClient
+import com.posdata.app.data.repository.TokenConsumptionRepository
 import com.posdata.app.data.repository.UserUpdateRepository
 import com.posdata.app.model.*
 import kotlinx.coroutines.delay
@@ -159,7 +160,9 @@ class PreferencesViewModelFactory(private val context: Context) : ViewModelProvi
             val userInfo = UserInfo(context)
             val localAPi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
-            val repository = UserUpdateRepository(localAPi, cloudApi, userInfo)
+            val tokenConsumptionRepository = TokenConsumptionRepository(userInfo)
+
+            val repository = UserUpdateRepository(localAPi, cloudApi, userInfo, tokenConsumptionRepository)
 
             @Suppress("UNCHECKED_CAST")
             return PreferencesViewModel(repository, userInfo) as T

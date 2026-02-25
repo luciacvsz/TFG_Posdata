@@ -10,6 +10,7 @@ import com.posdata.app.data.remote.LocalApiService
 import com.posdata.app.data.remote.RetrofitClient
 import com.posdata.app.data.repository.DeleteAccountRepository
 import com.posdata.app.data.repository.LogoutRepository
+import com.posdata.app.data.repository.TokenConsumptionRepository
 import com.posdata.app.data.repository.UserUpdateRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -101,10 +102,11 @@ class ProfileViewModelFactory(private val context: Context) : ViewModelProvider.
 
             val localApi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
+            val tokenConsumptionRepository = TokenConsumptionRepository(userInfo)
 
-            val userUpdateRepository = UserUpdateRepository(localApi, cloudApi, userInfo)
+            val userUpdateRepository = UserUpdateRepository(localApi, cloudApi, userInfo, tokenConsumptionRepository)
             val logoutRepository = LogoutRepository(context, userInfo)
-            val deleteAccountRepository = DeleteAccountRepository(localApi, cloudApi, userInfo)
+            val deleteAccountRepository = DeleteAccountRepository(localApi, cloudApi, userInfo, tokenConsumptionRepository)
 
             @Suppress("UNCHECKED_CAST")
             return ProfileViewModel(userUpdateRepository, logoutRepository, deleteAccountRepository, userInfo) as T

@@ -98,12 +98,12 @@ class UserInfo(private val context: Context) {
         }
     }
 
-    suspend fun tryConsumeToken(): Boolean {
+    suspend fun tryConsumeTokens(amount: Int): Boolean {
         var success = false
         context.dataStore.edit { prefs ->
             val current = prefs[TOKENS] ?: 0
-            if (current > 0) {
-                prefs[TOKENS] = current - 1
+            if (current >= amount) {
+                prefs[TOKENS] = current - amount
                 success = true
             }
         }

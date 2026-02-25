@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.first
 class DeleteAccountRepository(
     private val localApi: LocalApiService,
     private val cloudApi: CloudApiService,
-    private val userInfo: UserInfo
+    private val userInfo: UserInfo,
+    private val tokenConsumptionRepository: TokenConsumptionRepository
 ) {
 
     private suspend fun getCurrentUserId(): String? {
@@ -19,6 +20,11 @@ class DeleteAccountRepository(
     suspend fun performDeleteAccount(): Result<String> {
         return try {
             val userId = getCurrentUserId() ?: throw Exception("Usuario no identificado")
+
+            val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.DELETE_USER)
+            if (tokenResult.isFailure) {
+                return Result.failure(tokenResult.exceptionOrNull() ?: Exception("Error en tokens"))
+            }
 
             val cloudResponse = cloudApi.deleteUser(userId)
             if (!cloudResponse.isSuccessful)  {

@@ -12,14 +12,18 @@ import androidx.work.WorkerParameters
 import com.posdata.app.data.local.UserInfo
 import com.posdata.app.data.remote.RetrofitClient
 import com.posdata.app.data.remote.request.CloudSMSPOSTRequest
+import com.posdata.app.data.remote.request.LocalUserPATCHRequest
 import com.posdata.app.data.remote.response.ResultsDTO
-import com.posdata.app.data.remote.response.SMSGETResponse
+import com.posdata.app.data.remote.response.CloudSMSGETResponse
+import com.posdata.app.data.repository.CloudCosts
+import com.posdata.app.data.repository.TokenConsumptionRepository
 import com.posdata.app.model.AppExhaustivity
 import com.posdata.app.model.AppExplanationMode
 import com.posdata.app.model.AppNotificationSound
 import com.posdata.app.model.AppPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import retrofit2.Retrofit
 
 class SMishingAnalysisWorker(
         context: Context,
@@ -27,6 +31,9 @@ class SMishingAnalysisWorker(
 ) : CoroutineWorker(context, workerParams) {
 
     private val cloudApi = RetrofitClient.cloudInstance
+    private val localApi = RetrofitClient.localInstance
+    private val tokenConsumptionRepository = TokenConsumptionRepository(
+        UserInfo(applicationContext))
 
     override suspend fun doWork(): Result {
         val userInfo = UserInfo(applicationContext)
@@ -41,6 +48,20 @@ class SMishingAnalysisWorker(
         val message = inputData.getString("MESSAGE") ?: return Result.failure()
 
         return try {
+            val tokenResult1 = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.POST_SMS)
+            if (tokenResult1.isFailure) {
+                Log.e("AnalysisWorker", "Tokens insuficientes para analizar SMS")
+                return Result.failure()
+            }
+
+            val localResponse1 = localApi.patchUser(userId = userData.userId,
+                LocalUserPATCHRequest(null, null, CloudCosts.POST_SMS)
+            )
+            if(!localResponse1.isSuccessful || localResponse1.body() == null) {
+                Log.e("AnalysisWorker", "Error inesperado actualizando tokens en la base de datos local. El SMS no se pudo analizar.")
+                return Result.failure()
+            }
+
             val postResponse = cloudApi.postSMS(userData.userId, CloudSMSPOSTRequest(sender, message))
             if(!postResponse.isSuccessful || postResponse.body() == null) {
                 return Result.retry()
@@ -48,12 +69,26 @@ class SMishingAnalysisWorker(
 
             val executionId = postResponse.body()!!.executionId
 
-            var checkResult: SMSGETResponse? = null
+            var checkResult: CloudSMSGETResponse? = null
             var attempts = 0
             val maxAttempts = 5
 
             while(attempts < maxAttempts) {
                 delay(2000)
+
+                val tokenResult2 = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.GET_SMS)
+                if (tokenResult2.isFailure) {
+                    Log.e("AnalysisWorker", "Tokens insuficientes para analizar SMS")
+                    return Result.failure()
+                }
+
+                val localResponse2 = localApi.patchUser(userId = userData.userId,
+                    LocalUserPATCHRequest(null, null, CloudCosts.GET_SMS)
+                )
+                if(!localResponse2.isSuccessful || localResponse2.body() == null) {
+                    Log.e("AnalysisWorker", "Error inesperado actualizando tokens en la base de datos local. El SMS no se pudo analizar.")
+                    return Result.failure()
+                }
 
                 val getResponse = cloudApi.getSMS(userData.userId, executionId)
                 if(getResponse.isSuccessful && getResponse.body() != null) {
@@ -80,7 +115,7 @@ class SMishingAnalysisWorker(
     private fun handleNotification(
         preferences: AppPreferences,
         sender: String,
-        results: SMSGETResponse
+        results: CloudSMSGETResponse
     ) {
         val dto: ResultsDTO = results.results
         val isSMishing = (dto.verdict == "MALICIOUS" || dto.verdict == "SUSPICIOUS")

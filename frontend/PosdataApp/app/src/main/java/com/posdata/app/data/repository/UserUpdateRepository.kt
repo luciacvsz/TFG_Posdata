@@ -10,7 +10,8 @@ import kotlinx.coroutines.flow.first
 class UserUpdateRepository(
     private val localApi: LocalApiService,
     private val cloudApi: CloudApiService,
-    private val userInfo: UserInfo
+    private val userInfo: UserInfo,
+    private val tokenConsumptionRepository: TokenConsumptionRepository
 ) {
 
     private suspend fun getCurrentUserId(): String? {
@@ -28,6 +29,18 @@ class UserUpdateRepository(
             val userId = getCurrentUserId() ?: throw Exception("Usuario no identificado")
 
             if (password == null) {
+                val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.PATCH_USER)
+                if (tokenResult.isFailure) {
+                    return Result.failure(tokenResult.exceptionOrNull() ?: Exception("Error en tokens"))
+                }
+
+                val localResponse1 = localApi.patchUser(userId = userId,
+                    LocalUserPATCHRequest(null, null, CloudCosts.PATCH_USER)
+                )
+                if(!localResponse1.isSuccessful || localResponse1.body() == null) {
+                    return Result.failure(Exception(localResponse1.body()?.message ?: "Error inesperado actualizando tokens en la base de datos local."))
+                }
+
                 val cloudRequest = CloudProfilePATCHRequest(
                     fullName = fullName,
                     phoneNumber = phoneNumber,
@@ -42,9 +55,10 @@ class UserUpdateRepository(
 
             if (fullName == null && phoneNumber == null) {
                 val passwordToSave = password?.let { HashUtils.sha512(it)}
-                val localRequest = LocalProfilePATCHRequest(
+                val localRequest = LocalUserPATCHRequest(
                     email = email,
-                    password = passwordToSave
+                    password = passwordToSave,
+                    tokens = null
                 )
 
                 val localResponse = localApi.patchUser(userId, localRequest)
@@ -78,6 +92,18 @@ class UserUpdateRepository(
         return try {
             val userId = getCurrentUserId() ?: throw Exception("Usuario no identificado")
 
+            val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.PATCH_USER)
+            if (tokenResult.isFailure) {
+                return Result.failure(tokenResult.exceptionOrNull() ?: Exception("Error en tokens"))
+            }
+
+            val localResponse1 = localApi.patchUser(userId = userId,
+                LocalUserPATCHRequest(null, null, CloudCosts.PATCH_USER)
+            )
+            if(!localResponse1.isSuccessful || localResponse1.body() == null) {
+                return Result.failure(Exception(localResponse1.body()?.message ?: "Error inesperado actualizando tokens en la base de datos local."))
+            }
+
             val preferencesDto = PreferencesDTO(
                 colorScheme = colorScheme,
                 fontSize = fontSize,
@@ -110,6 +136,18 @@ class UserUpdateRepository(
     suspend fun syncContacts(contacts: List<TrustedContact>): Result<Boolean> {
         return try {
             val userId = getCurrentUserId() ?: throw Exception("Usuario no identificado")
+
+            val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.PATCH_USER)
+            if (tokenResult.isFailure) {
+                return Result.failure(tokenResult.exceptionOrNull() ?: Exception("Error en tokens"))
+            }
+
+            val localResponse1 = localApi.patchUser(userId = userId,
+                LocalUserPATCHRequest(null, null, CloudCosts.PATCH_USER)
+            )
+            if(!localResponse1.isSuccessful || localResponse1.body() == null) {
+                return Result.failure(Exception(localResponse1.body()?.message ?: "Error inesperado actualizando tokens en la base de datos local."))
+            }
 
             val dtos = contacts.map { domainContact ->
                 TrustedContactDTO(
