@@ -1,4 +1,4 @@
-package com.posdata.app.sms;
+package com.posdata.app.sms
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,7 +9,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.posdata.app.data.local.UserInfo
+import com.posdata.app.data.local.UserDataStore
 import com.posdata.app.data.remote.RetrofitClient
 import com.posdata.app.data.remote.request.CloudSMSPOSTRequest
 import com.posdata.app.data.remote.request.LocalUserPATCHRequest
@@ -23,8 +23,24 @@ import com.posdata.app.model.AppNotificationSound
 import com.posdata.app.model.AppPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import retrofit2.Retrofit
 
+/**
+ * Background worker responsible for submitting an incoming SMS to the cloud
+ * smishing analysis service and displaying a notification with the result.
+ *
+ * Triggered by [SMSReceiver] via WorkManager whenever an SMS is received.
+ * Runs as a [CoroutineWorker] to support suspend functions and coroutine-based delays.
+ *
+ * ## Analysis flow
+ * 1. Verifies the user is authenticated and has sufficient tokens.
+ * 2. Deducts the [CloudCosts.POST_SMS] token cost from the local database.
+ * 3. Submits the SMS to the cloud via POST and retrieves the execution ID.
+ * 4. Polls the cloud via GET until the result is available or the attempt limit is reached.
+ * 5. Displays a notification based on the verdict and the user's preferences.
+ *
+ * Returns [Result.retry] on transient failures (network errors, cloud not ready)
+ * and [Result.failure] on permanent failures (insufficient tokens, missing input data).
+ */
 class SMishingAnalysisWorker(
         context: Context,
         workerParams: WorkerParameters
@@ -32,12 +48,21 @@ class SMishingAnalysisWorker(
 
     private val cloudApi = RetrofitClient.cloudInstance
     private val localApi = RetrofitClient.localInstance
-    private val tokenConsumptionRepository = TokenConsumptionRepository(
-        UserInfo(applicationContext))
+    private val userInfo = UserDataStore(applicationContext)
+    private val tokenConsumptionRepository = TokenConsumptionRepository(userInfo)
 
+    /**
+     * Executes the smishing analysis flow.
+     *
+     * Expects the following input data keys:
+     * - `SENDER`: phone number or identifier of the SMS sender.
+     * - `MESSAGE`: raw text content of the SMS message.
+     *
+     * @return [Result.success] if the analysis completed and the notification was shown;
+     *         [Result.retry] if a transient error occurred;
+     *         [Result.failure] if a permanent error occurred.
+     */
     override suspend fun doWork(): Result {
-        val userInfo = UserInfo(applicationContext)
-
         val userData = userInfo.userData.first()
 
         if (!userData.isLoggedIn ) {
@@ -50,60 +75,50 @@ class SMishingAnalysisWorker(
         return try {
             val tokenResult1 = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.POST_SMS)
             if (tokenResult1.isFailure) {
-                Log.e("AnalysisWorker", "Tokens insuficientes para analizar SMS")
+                Log.e("SMishingWorker", "Insufficient tokens to analyze SMS")
                 return Result.failure()
             }
 
-            val localResponse1 = localApi.patchUser(userId = userData.userId,
-                LocalUserPATCHRequest(null, null, CloudCosts.POST_SMS)
+            val tokenPatchResponse = localApi.patchUser(
+                userId  = userData.userId,
+                request = LocalUserPATCHRequest(tokens = userData.tokens)
             )
-            if(!localResponse1.isSuccessful || localResponse1.body() == null) {
-                Log.e("AnalysisWorker", "Error inesperado actualizando tokens en la base de datos local. El SMS no se pudo analizar.")
+            if (!tokenPatchResponse.isSuccessful || tokenPatchResponse.body() == null) {
+                Log.e("SMishingWorker", "Failed to update token balance in local database")
                 return Result.failure()
             }
 
-            val postResponse = cloudApi.postSMS(userData.userId, CloudSMSPOSTRequest(sender, message))
-            if(!postResponse.isSuccessful || postResponse.body() == null) {
+            val postResponse = cloudApi.postSMS(
+                userId  = userData.userId,
+                request = CloudSMSPOSTRequest(sender, message)
+            )
+            if (!postResponse.isSuccessful || postResponse.body() == null) {
                 return Result.retry()
             }
 
             val executionId = postResponse.body()!!.executionId
 
-            var checkResult: CloudSMSGETResponse? = null
+            var analysisResult: CloudSMSGETResponse? = null
             var attempts = 0
             val maxAttempts = 5
 
             while(attempts < maxAttempts) {
                 delay(2000)
 
-                val tokenResult2 = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.GET_SMS)
-                if (tokenResult2.isFailure) {
-                    Log.e("AnalysisWorker", "Tokens insuficientes para analizar SMS")
-                    return Result.failure()
-                }
-
-                val localResponse2 = localApi.patchUser(userId = userData.userId,
-                    LocalUserPATCHRequest(null, null, CloudCosts.GET_SMS)
-                )
-                if(!localResponse2.isSuccessful || localResponse2.body() == null) {
-                    Log.e("AnalysisWorker", "Error inesperado actualizando tokens en la base de datos local. El SMS no se pudo analizar.")
-                    return Result.failure()
-                }
-
                 val getResponse = cloudApi.getSMS(userData.userId, executionId)
-                if(getResponse.isSuccessful && getResponse.body() != null) {
-                    checkResult = getResponse.body()
+                if (getResponse.isSuccessful && getResponse.body() != null) {
+                    analysisResult = getResponse.body()
                     break
                 }
 
                 attempts++
             }
 
-            if (checkResult == null){
+            if (analysisResult == null){
                 return Result.retry()
             }
 
-            handleNotification(userData.preferences, sender, checkResult)
+            handleNotification(userData.preferences, sender, message, analysisResult)
 
             Result.success()
         } catch (e: Exception) {
@@ -112,49 +127,100 @@ class SMishingAnalysisWorker(
         }
     }
 
+    /**
+     * Determines whether a notification should be shown based on the user's
+     * exhaustivity preference and the analysis verdict.
+     *
+     * - [AppExhaustivity.REGULAR]: only notifies on MALICIOUS or SUSPICIOUS verdicts.
+     * - [AppExhaustivity.ENHANCED]: always notifies, including SAFE verdicts.
+     *
+     * @param preferences Current user preferences.
+     * @param sender Phone number or identifier of the SMS sender.
+     * @param message SMS received by the user.
+     * @param results Full analysis response from the cloud.
+     */
     private fun handleNotification(
         preferences: AppPreferences,
         sender: String,
+        message: String,
         results: CloudSMSGETResponse
     ) {
         val dto: ResultsDTO = results.results
-        val isSMishing = (dto.verdict == "MALICIOUS" || dto.verdict == "SUSPICIOUS")
+        val isThreat = dto.verdict == "MALICIOUS" || dto.verdict == "SUSPICIOUS"
 
         val shouldNotify = when (preferences.exhaustivity) {
-            AppExhaustivity.REGULAR -> isSMishing
+            AppExhaustivity.REGULAR  -> isThreat
             AppExhaustivity.ENHANCED -> true
         }
 
         if (shouldNotify) {
-            showNotification(sender, preferences.notificationSound, preferences.explanationMode, dto)
+            showNotification(
+                sender = sender,
+                message = message,
+                notificationSound = preferences.notificationSound,
+                explanationMode = preferences.explanationMode,
+                results = dto
+            )
         }
     }
 
+    /**
+     * Builds and displays a system notification with the analysis result.
+     *
+     * The notification title, icon, and accent color reflect the verdict severity.
+     * Sound and vibration are controlled by the user's [notificationSound] preference.
+     * Extended details are shown in the expanded notification view if
+     * [explanationMode] is [AppExplanationMode.ON] and details are available.
+     *
+     * @param sender Phone number or identifier of the SMS sender.
+     * @param message SMS received by the user.
+     * @param notificationSound Whether sound and vibration are enabled.
+     * @param explanationMode Whether extended analysis details should be shown.
+     * @param results Analysis result DTO containing verdict, reason, and details.
+     */
     private fun showNotification(
         sender: String,
+        message: String,
         notificationSound: AppNotificationSound,
         explanationMode: AppExplanationMode,
         results: ResultsDTO
     ) {
-        val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channelId = "posdata_analysis_channel"
 
-        val title = if (results.verdict == "malicious") "⚠️ ¡Amenaza Detectada!"
-        else if (results.verdict == "suspicious") "⚠️ Posible Mensaje Malicioso"
-        else "✅ Mensaje Seguro"
+        val title = when (results.verdict) {
+            "MALICIOUS"  -> "⚠️ ¡Amenaza Detectada!"
+            "SUSPICIOUS" -> "⚠️ Mensaje Sospechoso"
+            else         -> "✅ Mensaje Seguro"
+        }
 
-        val icon = if (results.verdict == "malicious" || results.verdict == "suspicious")
-            android.R.drawable.stat_sys_warning else android.R.drawable.ic_dialog_info
+        val icon = when (results.verdict) {
+            "MALICIOUS", "SUSPICIOUS" -> android.R.drawable.stat_sys_warning
+            else                      -> android.R.drawable.ic_dialog_info
+        }
 
-        val colorAccent = if (results.verdict == "malicious") Color.RED
-        else if (results.verdict == "suspicious") Color.YELLOW
-        else Color.GREEN
+        val colorAccent = when (results.verdict) {
+            "MALICIOUS"  -> Color.RED
+            "SUSPICIOUS" -> Color.YELLOW
+            else         -> Color.GREEN
+        }
 
-        val shortText = results.reason
-        val longText = if (explanationMode == AppExplanationMode.ON && !results.details.isNullOrEmpty()) {
-            "${results.reason}\n\n🔍 Detalles técnicos:\n${results.details}"
-        } else {
-            results.reason
+        val isThreat = results.verdict == "MALICIOUS" || results.verdict == "SUSPICIOUS"
+
+        val shortText = "De: $sender — ${results.reason}"
+
+        val longText = buildString {
+            append("De: $sender\n")
+            append(results.reason)
+
+            if (isThreat) {
+                append("\n\nMensaje Original:\n\"$message\"")
+            }
+
+            if (explanationMode == AppExplanationMode.ON && !results.details.isNullOrEmpty()) {
+                append("\n\n🔍 Detalles:\n${results.details}")
+            }
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -176,37 +242,29 @@ class SMishingAnalysisWorker(
             notificationManager.createNotificationChannel(channel)
         }
 
-        val builder = NotificationCompat.Builder(applicationContext, channelId)
+        val notification = NotificationCompat.Builder(applicationContext, channelId)
             .setSmallIcon(icon)
             .setContentTitle(title)
             .setContentText(shortText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(longText)) // Texto expandible
+            .setStyle(NotificationCompat.BigTextStyle().bigText(longText))
             .setColor(colorAccent)
             .setAutoCancel(true)
-            .setPriority(if (notificationSound == AppNotificationSound.ON) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_LOW)
-
-        if (notificationSound == AppNotificationSound.ON) {
-            builder.setDefaults(NotificationCompat.DEFAULT_ALL)
-        } else {
-            builder.setSound(null)
-            builder.setVibrate(longArrayOf(0L))
-        }
-
-        if (!notificationManager.areNotificationsEnabled()) {
-            Log.e("NotifCheck", "¡ERROR! Las notificaciones están desactivadas para la app.")
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = notificationManager.getNotificationChannel(channelId)
-            if (channel == null) {
-                Log.e("NotifCheck", "¡ERROR! El canal '$channelId' NO EXISTE. Debes crearlo antes.")
-            } else if (channel.importance == NotificationManager.IMPORTANCE_NONE) {
-                Log.e("NotifCheck", "¡ERROR! El usuario ha bloqueado este canal específico.")
-            } else {
-                Log.i("NotifCheck", "Canal correcto. Importancia: ${channel.importance}")
+            .setPriority(
+                if (notificationSound == AppNotificationSound.ON)
+                    NotificationCompat.PRIORITY_HIGH
+                else
+                    NotificationCompat.PRIORITY_LOW
+            )
+            .apply {
+                if (notificationSound == AppNotificationSound.ON) {
+                    setDefaults(NotificationCompat.DEFAULT_ALL)
+                } else {
+                    setSound(null)
+                    setVibrate(longArrayOf(0L))
+                }
             }
-        }
+            .build()
 
-        notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
+        notificationManager.notify(System.currentTimeMillis().toInt(), notification)
     }
 }

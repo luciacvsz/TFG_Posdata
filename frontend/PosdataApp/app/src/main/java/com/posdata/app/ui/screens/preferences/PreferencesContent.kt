@@ -1,39 +1,38 @@
 package com.posdata.app.ui.screens.preferences
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.posdata.app.model.*
 import com.posdata.app.ui.components.PosdataColorOptionSwitch
 import com.posdata.app.ui.components.PosdataPreferenceSwitch
 import com.posdata.app.ui.components.PosdataStatusDialog
-import com.posdata.app.ui.screens.profile.ProfileUiState
-import com.posdata.app.ui.screens.trusted_contacts.TrustedContactsUiState
 import com.posdata.app.ui.theme.*
 
+/**
+ * Preferences screen content.
+ *
+ * Displays controls for all user-configurable application preferences:
+ * color scheme, font size, notification sound, explanation mode, and analysis exhaustivity.
+ * Each change is persisted immediately via [PreferencesViewModel].
+ *
+ * Shows a fullscreen loading overlay while an update is in progress,
+ * and a status dialog on success or failure.
+ *
+ * @param userData Current session data used to read the active preference values.
+ * @param viewModel ViewModel managing preference update operations and UI state.
+ */
 @Composable
 fun PreferencesContent(
     userData: UserData?,
@@ -149,7 +148,6 @@ fun PreferencesContent(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-
         HorizontalDivider(color = MaterialTheme.colorScheme.outline)
         Spacer(modifier = Modifier.height(32.dp))
 

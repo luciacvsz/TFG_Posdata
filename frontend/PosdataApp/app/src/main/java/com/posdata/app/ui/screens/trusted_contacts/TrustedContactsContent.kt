@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -25,12 +24,24 @@ import com.posdata.app.ui.components.PosdataContactDialog
 import com.posdata.app.ui.components.PosdataPrimaryButton
 import com.posdata.app.ui.components.PosdataStatusDialog
 
+/**
+ * Trusted contacts screen content.
+ *
+ * Displays the user's list of trusted contacts as tappable cards that open
+ * an edit/delete dialog. Provides an "Añadir contacto" button that opens
+ * an add dialog. All changes are synced to the cloud immediately via
+ * [TrustedContactsViewModel].
+ *
+ * Shows a fullscreen loading overlay while a sync is in progress,
+ * and a status dialog on success or failure.
+ *
+ * @param userData Current session data used to read the current contacts list.
+ * @param viewModel ViewModel managing contact sync operations and UI state.
+ */
 @Composable
 fun TrustedContactsContent(
     userData: UserData?,
-    viewModel: TrustedContactsViewModel = viewModel(
-        factory = TrustedContactsViewModelFactory(LocalContext.current)
-    )
+    viewModel: TrustedContactsViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val trustedContacts = userData?.trustedContacts ?: emptyList()

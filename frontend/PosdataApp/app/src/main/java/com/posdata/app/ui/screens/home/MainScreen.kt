@@ -21,14 +21,31 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.posdata.app.model.UserData
 import com.posdata.app.ui.navigation.Screen
+import com.posdata.app.ui.screens.login.LoginViewModel
+import com.posdata.app.ui.screens.login.LoginViewModelFactory
 import com.posdata.app.ui.screens.profile.ProfileContent
 import com.posdata.app.ui.screens.trusted_contacts.TrustedContactsContent
 import com.posdata.app.ui.screens.preferences.PreferencesContent
 import com.posdata.app.ui.screens.preferences.PreferencesViewModel
+import com.posdata.app.ui.screens.profile.ProfileViewModel
+import com.posdata.app.ui.screens.register.RegisterViewModel
+import com.posdata.app.ui.screens.trusted_contacts.TrustedContactsViewModel
 
+/**
+ * Root screen of the authenticated section of the app.
+ *
+ * Sets up the main [Scaffold] with a bottom navigation bar and hosts the
+ * nested [NavHost] that manages navigation between the four main sections:
+ * Home, Profile, Trusted Contacts, and Preferences.
+ *
+ * @param userData Current session data of the authenticated user.
+ * @param preferencesViewModel ViewModel shared with [PreferencesContent].
+ */
 @Composable
 fun MainScreen(
     userData: UserData?,
+    profileViewModel: ProfileViewModel,
+    trustedContactsViewModel: TrustedContactsViewModel,
     preferencesViewModel: PreferencesViewModel
 ) {
     val navController = rememberNavController()
@@ -47,19 +64,21 @@ fun MainScreen(
         ) {
             composable(Screen.Home.route) {
                 HomeContent(
-                    fullName = userData?.fullName ?: "Usuario"
+                    fullName = userData?.fullName ?: "Usuario",
                 )
             }
 
             composable(Screen.Profile.route) {
                 ProfileContent(
-                    userData = userData
+                    userData = userData,
+                    viewModel = profileViewModel
                 )
             }
 
             composable(Screen.TrustedContacts.route) {
                 TrustedContactsContent(
-                    userData = userData
+                    userData = userData,
+                    viewModel = trustedContactsViewModel
                 )
             }
 
@@ -73,10 +92,33 @@ fun MainScreen(
     }
 }
 
+/**
+ * Bottom navigation bar for the main screen.
+ *
+ * Highlights the currently active destination and handles navigation
+ * with [launchSingleTop] and state restoration to preserve scroll
+ * and UI state when switching between tabs.
+ *
+ * @param navController The [NavController] managing the main navigation graph.
+ */
 @Composable
 fun PosdataMainBottomBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    val itemColors = NavigationBarItemDefaults.colors(
+        selectedIconColor   = MaterialTheme.colorScheme.primary,
+        selectedTextColor   = MaterialTheme.colorScheme.primary,
+        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        indicatorColor      = MaterialTheme.colorScheme.primaryContainer
+    )
+
+    fun NavController.navigateTab(route: String) = navigate(route) {
+        popUpTo(graph.startDestinationId) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
 
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -85,106 +127,31 @@ fun PosdataMainBottomBar(navController: NavController) {
     ) {
         NavigationBarItem(
             selected = currentRoute == Screen.Home.route,
-            onClick = {
-                navController.navigate(Screen.Home.route) {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            },
-            icon = { Icon(Icons.Filled.Home, "Inicio", Modifier.size(32.dp)) },
-            label = {
-                Text(
-                    "Inicio",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.primary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = MaterialTheme.colorScheme.primaryContainer
-            )
+            onClick  = { navController.navigateTab(Screen.Home.route) },
+            icon     = { Icon(Icons.Filled.Home, "Inicio", Modifier.size(32.dp)) },
+            label    = { Text("Inicio", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold) },
+            colors   = itemColors
         )
-
         NavigationBarItem(
             selected = currentRoute == Screen.Profile.route,
-            onClick = {
-                navController.navigate(Screen.Profile.route) {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            },
-            icon = { Icon(Icons.Filled.Person, "Perfil", Modifier.size(32.dp)) },
-            label = {
-                Text(
-                    "Perfil",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.primary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = MaterialTheme.colorScheme.primaryContainer
-            )
+            onClick  = { navController.navigateTab(Screen.Profile.route) },
+            icon     = { Icon(Icons.Filled.Person, "Perfil", Modifier.size(32.dp)) },
+            label    = { Text("Perfil", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold) },
+            colors   = itemColors
         )
-
         NavigationBarItem(
             selected = currentRoute == Screen.TrustedContacts.route,
-            onClick = {
-                navController.navigate(Screen.TrustedContacts.route) {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            },
-            icon = { Icon(Icons.Filled.Groups, "Contactos", Modifier.size(32.dp)) },
-            label = {
-                Text(
-                    "Contactos",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.primary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = MaterialTheme.colorScheme.primaryContainer
-            )
+            onClick  = { navController.navigateTab(Screen.TrustedContacts.route) },
+            icon     = { Icon(Icons.Filled.Groups, "Contactos", Modifier.size(32.dp)) },
+            label    = { Text("Contactos", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold) },
+            colors   = itemColors
         )
-
         NavigationBarItem(
             selected = currentRoute == Screen.Preferences.route,
-            onClick = {
-                navController.navigate(Screen.Preferences.route) {
-                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                    launchSingleTop = true
-                    restoreState = true
-                }
-            },
-            icon = { Icon(Icons.Filled.Settings, "Ajustes", Modifier.size(32.dp)) },
-            label = {
-                Text(
-                    "Ajustes",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.primary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                indicatorColor = MaterialTheme.colorScheme.primaryContainer
-            )
+            onClick  = { navController.navigateTab(Screen.Preferences.route) },
+            icon     = { Icon(Icons.Filled.Settings, "Ajustes", Modifier.size(32.dp)) },
+            label    = { Text("Ajustes", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold) },
+            colors   = itemColors
         )
     }
 }

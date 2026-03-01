@@ -1,77 +1,164 @@
 package com.posdata.app.data.repository
 
-import com.posdata.app.data.local.UserInfo
+import com.posdata.app.data.local.UserDataStore
 import com.posdata.app.data.remote.CloudApiService
 import com.posdata.app.data.remote.LocalApiService
 import com.posdata.app.data.remote.request.*
+import com.posdata.app.data.repository.contract.UserUpdateRepositoryContract
 import com.posdata.app.model.*
+import com.posdata.app.utils.HashUtils
 import kotlinx.coroutines.flow.first
 
+/**
+ * Repository responsible for handling all user data update operations.
+ *
+ * Coordinates partial updates across the local database, the cloud service,
+ * and the local DataStore, verifying and consuming the required token balance
+ * before any cloud operation is performed.
+ *
+ * @param localApi Service interface for the local API.
+ * @param cloudApi Service interface for the cloud API.
+ * @param userInfo Local data source used to read session data and persist updates.
+ * @param tokenConsumptionRepository Repository used to verify and consume tokens.
+ */
 class UserUpdateRepository(
     private val localApi: LocalApiService,
     private val cloudApi: CloudApiService,
-    private val userInfo: UserInfo,
+    private val userInfo: UserDataStore,
     private val tokenConsumptionRepository: TokenConsumptionRepository
-) {
+): UserUpdateRepositoryContract {
 
+    /**
+     * Retrieves the current user's ID from the local session.
+     *
+     * @return The user ID if the user is logged in and the ID is not empty, null otherwise.
+     */
     private suspend fun getCurrentUserId(): String? {
         val user = userInfo.userData.first()
         return if (user.isLoggedIn && user.userId.isNotEmpty()) user.userId else null
     }
 
-    suspend fun updateProfile(
-        fullName: String? = null,
-        phoneNumber: String? = null,
-        email: String? = null,
-        password: String? = null
+    /**
+     * Updates the user's profile data and/or credentials.
+     *
+     * Handles two mutually exclusive flows depending on the fields provided.
+     * These flows are always triggered as separate operations from the UI:
+     *
+     * - **Credential update** (email and/or password):
+     *   - Password is always updated in the local database only.
+     *   - Email is updated in the local database, the cloud profile, and the DataStore.
+     *     Requires token consumption only if email is provided.
+     *
+     * - **Profile update** (fullName and/or phoneNumber):
+     *   - Updates the cloud profile and the DataStore.
+     *   - Always requires token consumption.
+     *
+     * @param fullName New full name, or null to leave it unchanged.
+     * @param phoneNumber New phone number, or null to leave it unchanged.
+     * @param email New email address, or null to leave it unchanged.
+     * @param password New plain-text password, or null to leave it unchanged.
+     * @return [Result.success] if the update was applied successfully;
+     *         [Result.failure] with a descriptive exception if any step fails.
+     */
+    override suspend fun updateProfile(
+        fullName: String?,
+        phoneNumber: String?,
+        email: String?,
+        password: String?
     ): Result<Boolean> {
         return try {
-            val userId = getCurrentUserId() ?: throw Exception("Usuario no identificado")
+            val userId = getCurrentUserId()
+                ?: return Result.failure(Exception("User not authenticated"))
 
-            if (password == null) {
+            val hashedPassword = password?.let { HashUtils.sha512(it) }
+            val isCredentialUpdate = email != null || hashedPassword != null
+            val isProfileUpdate = fullName != null || phoneNumber != null
+
+            if (isCredentialUpdate) {
+
+                if (email != null) {
+
+                    val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.PATCH_USER)
+                    if (tokenResult.isFailure) {
+                        return Result.failure(
+                            tokenResult.exceptionOrNull() ?: Exception("Failed to process token balance")
+                        )
+                    }
+
+                    val tokenPatchResponse = localApi.patchUser(
+                        userId  = userId,
+                        request = LocalUserPATCHRequest(tokens = userInfo.userData.first().tokens)
+                    )
+                    if (!tokenPatchResponse.isSuccessful || tokenPatchResponse.body() == null) {
+                        return Result.failure(
+                            Exception(
+                                tokenPatchResponse.body()?.message
+                                    ?: "Unexpected error updating token balance in local database"
+                            )
+                        )
+                    }
+
+                    val cloudResponse = cloudApi.patchProfile(
+                        userId  = userId,
+                        request = CloudProfilePATCHRequest(email = email)
+                    )
+                    if (!cloudResponse.isSuccessful) {
+                        return Result.failure(Exception("Failed to update email in cloud service"))
+                    }
+
+                    userInfo.updateProfile(email = email)
+                }
+
+                val localResponse = localApi.patchUser(
+                    userId  = userId,
+                    request = LocalUserPATCHRequest(
+                        email    = email,
+                        password = hashedPassword,
+                        tokens   = null
+                    )
+                )
+                if (!localResponse.isSuccessful) {
+                    return Result.failure(Exception("Failed to update credentials in local database"))
+                }
+            }
+
+            if (isProfileUpdate) {
+
                 val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.PATCH_USER)
                 if (tokenResult.isFailure) {
-                    return Result.failure(tokenResult.exceptionOrNull() ?: Exception("Error en tokens"))
+                    return Result.failure(
+                        tokenResult.exceptionOrNull() ?: Exception("Failed to process token balance")
+                    )
                 }
 
-                val localResponse1 = localApi.patchUser(userId = userId,
-                    LocalUserPATCHRequest(null, null, CloudCosts.PATCH_USER)
+                val tokenPatchResponse = localApi.patchUser(
+                    userId  = userId,
+                    request = LocalUserPATCHRequest(tokens = userInfo.userData.first().tokens)
                 )
-                if(!localResponse1.isSuccessful || localResponse1.body() == null) {
-                    return Result.failure(Exception(localResponse1.body()?.message ?: "Error inesperado actualizando tokens en la base de datos local."))
+                if (!tokenPatchResponse.isSuccessful || tokenPatchResponse.body() == null) {
+                    return Result.failure(
+                        Exception(
+                            tokenPatchResponse.body()?.message
+                                ?: "Unexpected error updating token balance in local database"
+                        )
+                    )
                 }
 
-                val cloudRequest = CloudProfilePATCHRequest(
-                    fullName = fullName,
-                    phoneNumber = phoneNumber,
-                    email = email
+                val cloudResponse = cloudApi.patchProfile(
+                    userId  = userId,
+                    request = CloudProfilePATCHRequest(
+                        fullName    = fullName,
+                        phoneNumber = phoneNumber,
+                        email       = null
+                    )
                 )
-
-                val cloudResponse = cloudApi.patchProfile(userId, cloudRequest)
                 if (!cloudResponse.isSuccessful) {
-                    throw Exception("Error al guardar perfil")
+                    return Result.failure(Exception("Failed to update profile in cloud service"))
                 }
-            }
 
-            if (fullName == null && phoneNumber == null) {
-                val passwordToSave = password?.let { HashUtils.sha512(it)}
-                val localRequest = LocalUserPATCHRequest(
-                    email = email,
-                    password = passwordToSave,
-                    tokens = null
-                )
-
-                val localResponse = localApi.patchUser(userId, localRequest)
-                if(!localResponse.isSuccessful) {
-                    throw Exception("Error al guardar perfil")
-                }
-            }
-
-            if( password == null) {
                 userInfo.updateProfile(
-                    fullName = fullName,
-                    phoneNumber = phoneNumber,
-                    email = email
+                    fullName    = fullName,
+                    phoneNumber = phoneNumber
                 )
             }
 
@@ -82,41 +169,65 @@ class UserUpdateRepository(
         }
     }
 
-    suspend fun updatePreferences(
-        colorScheme: AppColorScheme? = null,
-        fontSize: AppFontSize? = null,
-        notificationSound: AppNotificationSound? = null,
-        exhaustivity: AppExhaustivity? = null,
-        explanationMode: AppExplanationMode? = null
+    /**
+     * Updates the user's application preferences in the cloud and syncs
+     * the result to the local DataStore.
+     *
+     * Requires token consumption. Only non-null fields are applied.
+     *
+     * @param colorScheme New color scheme, or null to leave it unchanged.
+     * @param fontSize New font size, or null to leave it unchanged.
+     * @param notificationSound New notification sound setting, or null to leave it unchanged.
+     * @param exhaustivity New exhaustivity level, or null to leave it unchanged.
+     * @param explanationMode New explanation mode, or null to leave it unchanged.
+     * @return [Result.success] if the preferences were updated successfully;
+     *         [Result.failure] with a descriptive exception if any step fails.
+     */
+    override suspend fun updatePreferences(
+        colorScheme: AppColorScheme?,
+        fontSize: AppFontSize?,
+        notificationSound: AppNotificationSound?,
+        exhaustivity: AppExhaustivity?,
+        explanationMode: AppExplanationMode?
     ): Result<Boolean> {
         return try {
-            val userId = getCurrentUserId() ?: throw Exception("Usuario no identificado")
+            val userId = getCurrentUserId()
+                ?: return Result.failure(Exception("User not authenticated"))
 
             val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.PATCH_USER)
             if (tokenResult.isFailure) {
-                return Result.failure(tokenResult.exceptionOrNull() ?: Exception("Error en tokens"))
+                return Result.failure(
+                    tokenResult.exceptionOrNull() ?: Exception("Failed to process token balance")
+                )
             }
 
-            val localResponse1 = localApi.patchUser(userId = userId,
-                LocalUserPATCHRequest(null, null, CloudCosts.PATCH_USER)
+            val tokenPatchResponse = localApi.patchUser(
+                userId  = userId,
+                request = LocalUserPATCHRequest(tokens = userInfo.userData.first().tokens)
             )
-            if(!localResponse1.isSuccessful || localResponse1.body() == null) {
-                return Result.failure(Exception(localResponse1.body()?.message ?: "Error inesperado actualizando tokens en la base de datos local."))
+            if (!tokenPatchResponse.isSuccessful || tokenPatchResponse.body() == null) {
+                return Result.failure(
+                    Exception(
+                        tokenPatchResponse.body()?.message
+                            ?: "Unexpected error updating token balance in local database"
+                    )
+                )
             }
 
-            val preferencesDto = PreferencesDTO(
-                colorScheme = colorScheme,
-                fontSize = fontSize,
-                notificationSound = notificationSound,
-                exhaustivity = exhaustivity,
-                explanationMode = explanationMode
+            val cloudResponse = cloudApi.patchPreferences(
+                userId  = userId,
+                request = CloudPreferencesPATCHRequest(
+                    preferences = PreferencesDTO(
+                        colorScheme       = colorScheme,
+                        fontSize          = fontSize,
+                        notificationSound = notificationSound,
+                        exhaustivity      = exhaustivity,
+                        explanationMode   = explanationMode
+                    )
+                )
             )
-
-            val request = CloudPreferencesPATCHRequest(preferences = preferencesDto)
-
-            val response = cloudApi.patchPreferences(userId, request)
-            if (!response.isSuccessful){
-                throw Exception("Error al guardar ajustes")
+            if (!cloudResponse.isSuccessful) {
+                return Result.failure(Exception("Failed to update preferences in cloud service"))
             }
 
             userInfo.updatePreferences(
@@ -133,36 +244,60 @@ class UserUpdateRepository(
         }
     }
 
-    suspend fun syncContacts(contacts: List<TrustedContact>): Result<Boolean> {
+    /**
+     * Replaces the user's full list of trusted contacts in the cloud and syncs
+     * the result to the local DataStore.
+     *
+     * Maps domain model objects to their DTO equivalents before sending to the API.
+     * Blank phone numbers and emails are normalized to null, as the server does not
+     * accept empty strings for optional fields.
+     *
+     * Requires token consumption.
+     *
+     * @param contacts New list of trusted contacts to persist.
+     * @return [Result.success] if the contacts were synced successfully;
+     *         [Result.failure] with a descriptive exception if any step fails.
+     */
+    override suspend fun syncContacts(contacts: List<TrustedContact>): Result<Boolean> {
         return try {
-            val userId = getCurrentUserId() ?: throw Exception("Usuario no identificado")
+            val userId = getCurrentUserId()
+                ?: return Result.failure(Exception("User not authenticated"))
 
             val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.PATCH_USER)
             if (tokenResult.isFailure) {
-                return Result.failure(tokenResult.exceptionOrNull() ?: Exception("Error en tokens"))
-            }
-
-            val localResponse1 = localApi.patchUser(userId = userId,
-                LocalUserPATCHRequest(null, null, CloudCosts.PATCH_USER)
-            )
-            if(!localResponse1.isSuccessful || localResponse1.body() == null) {
-                return Result.failure(Exception(localResponse1.body()?.message ?: "Error inesperado actualizando tokens en la base de datos local."))
-            }
-
-            val dtos = contacts.map { domainContact ->
-                TrustedContactDTO(
-                    name = domainContact.name,
-                    role = domainContact.role,
-                    phoneNumber = domainContact.phoneNumber?.ifBlank { null },
-                    email = domainContact.email?.ifBlank { null }
+                return Result.failure(
+                    tokenResult.exceptionOrNull() ?: Exception("Failed to process token balance")
                 )
             }
 
-            val request = CloudTrustedContactsPATCHRequest(trustedContacts = dtos)
+            val tokenPatchResponse = localApi.patchUser(
+                userId  = userId,
+                request = LocalUserPATCHRequest(tokens = userInfo.userData.first().tokens)
+            )
+            if (!tokenPatchResponse.isSuccessful || tokenPatchResponse.body() == null) {
+                return Result.failure(
+                    Exception(
+                        tokenPatchResponse.body()?.message
+                            ?: "Unexpected error updating token balance in local database"
+                    )
+                )
+            }
 
-            val response = cloudApi.patchTrustedContacts(userId, request)
-            if (!response.isSuccessful) {
-                throw Exception("Error al sincronizar contactos")
+            val dtos = contacts.map { contact ->
+                TrustedContactDTO(
+                    name = contact.name,
+                    role = contact.role,
+                    phoneNumber = contact.phoneNumber?.ifBlank { null },
+                    email = contact.email?.ifBlank { null }
+                )
+            }
+
+            val cloudResponse = cloudApi.patchTrustedContacts(
+                userId  = userId,
+                request = CloudTrustedContactsPATCHRequest(trustedContacts = dtos)
+            )
+            if (!cloudResponse.isSuccessful) {
+                return Result.failure(Exception("Failed to sync trusted contacts in cloud service"))
             }
 
             userInfo.updateTrustedContacts(contacts)

@@ -1,6 +1,5 @@
 package com.posdata.app
 
-import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,18 +13,15 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import androidx.core.content.PackageManagerCompat
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.posdata.app.data.local.UserInfo
+import com.posdata.app.data.local.UserDataStore
 import com.posdata.app.data.remote.RetrofitClient
-import com.posdata.app.data.remote.loadApiKey
 import com.posdata.app.model.UserData
-import com.posdata.app.sms.SMSReceiverManager
 import com.posdata.app.ui.theme.PosdataAppTheme
 import com.posdata.app.ui.screens.login.LoginScreen
 import com.posdata.app.ui.screens.home.MainScreen
@@ -42,11 +38,20 @@ import com.posdata.app.ui.screens.register.RegisterViewModelFactory
 import com.posdata.app.ui.screens.trusted_contacts.TrustedContactsViewModel
 import com.posdata.app.ui.screens.trusted_contacts.TrustedContactsViewModelFactory
 
+/**
+ * Main entry point of the application.
+ *
+ * Responsible for:
+ * - Initializing [RetrofitClient] with the API key and URLs from `local.env`.
+ * - Instantiating all ViewModels at the activity level so they survive
+ *   recompositions and are shared across screens.
+ * - Observing [UserDataStore.userData] to reactively apply the user's
+ *   color scheme and font size preferences to the app theme.
+ * - Delegating navigation and screen rendering to [AppContent].
+ */
 class MainActivity : ComponentActivity() {
 
-    private lateinit var userInfo: UserInfo
-    private lateinit var loginViewModel: LoginViewModel
-    private lateinit var registerViewModel: RegisterViewModel
+    private lateinit var userDataStore: UserDataStore
     private lateinit var profileViewModel: ProfileViewModel
     private lateinit var trustedContactsViewModel: TrustedContactsViewModel
     private lateinit var preferencesViewModel: PreferencesViewModel
@@ -54,30 +59,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val apiKey = loadApiKey(this)
-        RetrofitClient.apiKey = apiKey
+        RetrofitClient.init(this)
 
-        userInfo = UserInfo(applicationContext)
-
-        loginViewModel = ViewModelProvider(
-            this,
-            LoginViewModelFactory(applicationContext)
-        )[LoginViewModel::class.java]
-
-        registerViewModel = ViewModelProvider(
-            this,
-            RegisterViewModelFactory(applicationContext)
-        )[RegisterViewModel::class.java]
-
-        profileViewModel = ViewModelProvider(
-            this,
-            ProfileViewModelFactory(applicationContext)
-        )[ProfileViewModel::class.java]
-
-        trustedContactsViewModel = ViewModelProvider(
-            this,
-            TrustedContactsViewModelFactory(applicationContext)
-        )[TrustedContactsViewModel::class.java]
+        userDataStore = UserDataStore(applicationContext)
 
         preferencesViewModel = ViewModelProvider(
             this,
@@ -85,9 +69,10 @@ class MainActivity : ComponentActivity() {
         )[PreferencesViewModel::class.java]
 
         setContent {
-            val userData by userInfo.userData.collectAsState(initial = null)
+            val userData by userDataStore.userData.collectAsState(initial = null)
             val currentColorScheme by preferencesViewModel.currentColorScheme.collectAsState()
             val currentFontSize by preferencesViewModel.currentFontSize.collectAsState()
+
             PosdataAppTheme(
                 colorScheme = currentColorScheme,
                 fontSize = currentFontSize
@@ -97,8 +82,8 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     AppContent(
-                        userData = userData,
-                        preferencesViewModel = preferencesViewModel
+                        userData,
+                        preferencesViewModel
                     )
                 }
             }
@@ -107,6 +92,25 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/**
+ * Root composable that drives the top-level navigation of the app.
+ *
+ * Shows a loading indicator while [userData] is null (initial DataStore read).
+ * Once loaded, navigates to the main flow if [UserData.isLoggedIn] is true,
+ * or to the login screen otherwise.
+ *
+ * Navigation after logout or account deletion is fully automatic — when
+ * [UserDataStore.userData] emits a new value with [isLoggedIn] = false,
+ * this composable recomposes and redirects to the login screen without
+ * any explicit navigation call from the ViewModels.
+ *
+ * The login and register success callbacks are intentionally empty for the
+ * same reason: session state changes in the DataStore drive navigation,
+ * not imperative callback calls.
+ *
+ * @param userData Current session data observed from [UserDataStore], or null while loading.
+ * @param preferencesViewModel Shared ViewModel passed down to [MainScreen].
+ */
 @Composable
 private fun AppContent(
     userData: UserData?,
@@ -127,7 +131,12 @@ private fun AppContent(
             startDestination = if (userData.isLoggedIn) "main_flow" else Screen.Login.route
         ) {
             composable(Screen.Login.route) {
+                val loginViewModel: LoginViewModel = viewModel(
+                    factory = LoginViewModelFactory(LocalContext.current)
+                )
+
                 LoginScreen(
+                    viewModel = loginViewModel,
                     onRegisterClick = {
                         rootNavController.navigate(Screen.Register.route)
                     },
@@ -136,7 +145,12 @@ private fun AppContent(
             }
 
             composable(Screen.Register.route) {
+                val registerViewModel: RegisterViewModel = viewModel(
+                    factory = RegisterViewModelFactory(LocalContext.current)
+                )
+
                 RegisterScreen(
+                    viewModel = registerViewModel,
                     onBackClick = {
                         rootNavController.popBackStack()
                     },
@@ -145,7 +159,19 @@ private fun AppContent(
             }
 
             composable("main_flow") {
-                MainScreen(userData = userData, preferencesViewModel)
+                val profileViewModel: ProfileViewModel = viewModel(
+                    factory = ProfileViewModelFactory(LocalContext.current)
+                )
+
+                val trustedContactsViewModel: TrustedContactsViewModel = viewModel(
+                    factory = TrustedContactsViewModelFactory(LocalContext.current)
+                )
+
+                MainScreen(
+                    userData,
+                    profileViewModel,
+                    trustedContactsViewModel,
+                    preferencesViewModel)
             }
         }
     }

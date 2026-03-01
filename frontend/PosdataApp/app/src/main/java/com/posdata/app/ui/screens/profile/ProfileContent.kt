@@ -22,12 +22,23 @@ import com.posdata.app.ui.components.PosdataEditDialog
 import com.posdata.app.ui.components.PosdataPrimaryButton
 import com.posdata.app.ui.components.PosdataStatusDialog
 
+/**
+ * Profile screen content.
+ *
+ * Displays the user's profile fields (name, phone, email, password) as tappable
+ * cards that open an edit dialog. Also provides logout and account deletion actions.
+ *
+ * Navigation after logout or account deletion is handled automatically by
+ * [com.posdata.app.MainActivity] via the reactive [com.posdata.app.data.local.UserDataStore.userData] flow — no explicit
+ * navigation call is needed here.
+ *
+ * @param userData Current session data used to populate the profile fields.
+ * @param viewModel ViewModel managing profile update operations and UI state.
+ */
 @Composable
 fun ProfileContent(
     userData: UserData?,
-    viewModel: ProfileViewModel = viewModel(
-        factory = ProfileViewModelFactory(LocalContext.current)
-    )
+    viewModel: ProfileViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -118,7 +129,7 @@ fun ProfileContent(
         Spacer(modifier = Modifier.height(32.dp))
     }
 
-    if (uiState is ProfileUiState.Loading) {
+    if (isLoading) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -163,12 +174,7 @@ fun ProfileContent(
             isPassword = currentField == ProfileField.PASSWORD,
             onDismiss = { showEditDialog = false },
             onSave = { newValue ->
-                when (currentField) {
-                    ProfileField.FULL_NAME -> viewModel.updateProfileField(field = ProfileField.FULL_NAME, newValue = newValue)
-                    ProfileField.PHONE_NUMBER -> viewModel.updateProfileField(field = ProfileField.PHONE_NUMBER, newValue = newValue)
-                    ProfileField.EMAIL -> viewModel.updateProfileField(field = ProfileField.EMAIL, newValue = newValue)
-                    else -> {}
-                }
+                viewModel.updateProfileField(field = currentField, newValue = newValue)
                 showEditDialog = false
             }
         )
@@ -218,6 +224,9 @@ fun ProfileContent(
     }
 }
 
+/**
+ * Returns the Spanish display label for a given [ProfileField].
+ */
 private fun getFieldLabel(field: ProfileField): String = when (field) {
     ProfileField.FULL_NAME -> "Nombre"
     ProfileField.PHONE_NUMBER -> "Teléfono"

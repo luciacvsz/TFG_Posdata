@@ -10,7 +10,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -19,11 +18,21 @@ import com.posdata.app.ui.components.PosdataInput
 import com.posdata.app.ui.components.PosdataPrimaryButton
 import com.posdata.app.ui.components.PosdataSimpleDialog
 
+
+/**
+ * Login screen of the application.
+ *
+ * Displays the app logo, email and password fields, and buttons to log in
+ * or navigate to the registration screen. Shows an error dialog if the
+ * login fails, and triggers [onLoginSuccess] when it succeeds.
+ *
+ * @param viewModel ViewModel managing the login state and business logic.
+ * @param onRegisterClick Callback invoked when the user taps "Crear Cuenta Nueva".
+ * @param onLoginSuccess Callback invoked when the login completes successfully.
+ */
 @Composable
 fun LoginScreen(
-    viewModel: LoginViewModel = viewModel(
-        factory = LoginViewModelFactory(LocalContext.current)
-    ),
+    viewModel: LoginViewModel,
     onRegisterClick: () -> Unit,
     onLoginSuccess: () -> Unit
 ) {
@@ -83,7 +92,7 @@ fun LoginScreen(
             placeholder = "Ingresa tu contraseña",
             value = password,
             onValueChange = { password = it },
-            keyboardType = KeyboardType.Email,
+            keyboardType = KeyboardType.Password,
             isPassword = true
         )
 

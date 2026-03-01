@@ -23,12 +23,22 @@ import com.posdata.app.ui.components.PosdataInput
 import com.posdata.app.ui.components.PosdataPrimaryButton
 import com.posdata.app.ui.components.PosdataSimpleDialog
 
+/**
+ * Registration screen of the application.
+ *
+ * Displays a form with fields for full name, phone number, email, and password.
+ * Shows an error dialog if the registration fails, and triggers [onRegisterSuccess]
+ * when it completes successfully. Navigation on success is driven by the reactive
+ * [com.posdata.app.data.local.UserDataStore.userData] flow in [com.posdata.app.MainActivity].
+ *
+ * @param viewModel ViewModel managing the registration state and business logic.
+ * @param onBackClick Callback invoked when the user taps the back arrow.
+ * @param onRegisterSuccess Callback invoked when the registration completes successfully.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    viewModel: RegisterViewModel = viewModel(
-        factory = RegisterViewModelFactory(LocalContext.current)
-    ),
+    viewModel: RegisterViewModel,
     onBackClick: () -> Unit,
     onRegisterSuccess: () -> Unit
 ) {
@@ -141,7 +151,9 @@ fun RegisterScreen(
                 placeholder = "Ingresa tu contraseña",
                 value = password,
                 onValueChange = { password = it },
-                isPassword = true
+                isPassword = true,
+                keyboardType = KeyboardType.Password
+
             )
 
             Spacer(modifier = Modifier.height(32.dp))

@@ -1,7 +1,6 @@
 package com.posdata.app.ui.screens.home
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,7 +12,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.posdata.app.ui.components.PosdataPrimaryButton
+import androidx.core.net.toUri
 
+/**
+ * Main content of the Home screen.
+ *
+ * Displays a personalized greeting and quick-access emergency contact buttons,
+ * allowing the user to call emergency services (112) or the national
+ * cybersecurity helpline (017 - INCIBE) directly from the app.
+ *
+ * @param fullName Full name of the authenticated user, shown in the greeting.
+ */
 @Composable
 fun HomeContent(
     fullName: String
@@ -52,11 +61,12 @@ fun HomeContent(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Emergency call button — opens the dialer with 112 pre-filled
             PosdataPrimaryButton(
                 text = "Llamar al 112 (Emergencias)",
                 onClick = {
                     val intent = Intent(Intent.ACTION_DIAL).apply {
-                        data = Uri.parse("tel:112")
+                        data = "tel:112".toUri()
                     }
                     context.startActivity(intent)
                 },
@@ -65,10 +75,11 @@ fun HomeContent(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Cybersecurity helpline button — opens the dialer with 017 pre-filled
             OutlinedButton(
                 onClick = {
                     val intent = Intent(Intent.ACTION_DIAL).apply {
-                        data = Uri.parse("tel:017")
+                        data = "tel:017".toUri()
                     }
                     context.startActivity(intent)
                 },
