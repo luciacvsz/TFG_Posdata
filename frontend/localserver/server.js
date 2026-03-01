@@ -22,7 +22,7 @@ const USER_PASSWORD_UPDATE_QUERY =
 const USER_TOKENS_UPDATE_QUERY =
   "UPDATE users SET tokens = ? WHERE user_id = ?";
 const LOGIN_POST_QUERY = "SELECT * FROM users WHERE email = ?";
-const USER_POST_QUERY = `INSERT INTO users (user_id, email, password, tokens, is_active) VALUES (?, ?, ?, ${INITIAL_TOKENS}, 1)`;
+const USER_POST_QUERY = `INSERT INTO users (user_id, email, password, tokens, is_active) VALUES (?, ?, ?, ?, 1)`;
 
 app.delete("/users/:user_id", (req, res) => {
   const { user_id } = req.params;
@@ -76,7 +76,7 @@ app.get("/users/:email", (req, res) => {
   });
 });
 
-app.patch("/users/:user_id", (req, res) => {
+app.patch("/users/:user_id", async (req, res) => {
   const { user_id } = req.params;
   const { email, password, tokens } = req.body;
 
@@ -106,7 +106,7 @@ app.patch("/users/:user_id", (req, res) => {
     }
 
     if (password) {
-      const secureHash = bcrypt.hash(password, saltRounds);
+      const secureHash = await bcrypt.hash(password, saltRounds);
 
       db.query(
         USER_PASSWORD_UPDATE_QUERY,
@@ -170,7 +170,7 @@ app.patch("/users/:user_id", (req, res) => {
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  db.query(LOGIN_POST_QUERY, [email], (err, results) => {
+  db.query(LOGIN_POST_QUERY, [email], async (err, results) => {
     if (err) {
       console.error(err);
       return res.status(500).json({
@@ -193,7 +193,7 @@ app.post("/login", (req, res) => {
       });
     }
 
-    const match = bcrypt.compare(password, results[0].password);
+    const match = await bcrypt.compare(password, results[0].password);
     if (!match) {
       return res.json({
         success: false,
@@ -210,28 +210,32 @@ app.post("/login", (req, res) => {
   });
 });
 
-app.post("/users/:user_id", (req, res) => {
+app.post("/users/:user_id", async (req, res) => {
   const { user_id } = req.params;
   const { email, password } = req.body;
 
   try {
-    const secureHash = bcrypt.hash(password, saltRounds);
+    const secureHash = await bcrypt.hash(password, saltRounds);
 
-    db.query(USER_POST_QUERY, [user_id, email, secureHash], (err, result) => {
-      if (err) {
-        console.error("Error while inserting user:", err);
-        return res.status(500).json({
-          success: false,
-          message: "Error creating user in local database",
+    db.query(
+      USER_POST_QUERY,
+      [user_id, email, secureHash, INITIAL_TOKENS],
+      (err, result) => {
+        if (err) {
+          console.error("Error while inserting user:", err);
+          return res.status(500).json({
+            success: false,
+            message: "Error creating user in local database",
+          });
+        }
+
+        res.json({
+          success: true,
+          message: "Registration successful",
+          tokens: INITIAL_TOKENS,
         });
-      }
-
-      res.json({
-        success: true,
-        message: "Registration successful",
-        tokens: INITIAL_TOKENS,
-      });
-    });
+      },
+    );
   } catch (err) {
     console.error("Error hashing password:", err);
     return res.status(500).json({
