@@ -191,11 +191,11 @@ def lambda_handler(event, context):
             For any other errors during processing.
     '''
     try:
-        logger.info(f"Processing notification for user: {user_id} | Execution ID: {execution_id}")
-
         user_id = event.get('user_id')
         execution_id = event.get('execution_id')
         verdict = event.get('verdict')
+
+        logger.info(f"Processing notification for user: {user_id} | Execution ID: {execution_id}")
 
         path = store_notification_in_s3(event, user_id, execution_id)
         if verdict in [Verdict.SUSPICIOUS.value, Verdict.MALICIOUS.value]:

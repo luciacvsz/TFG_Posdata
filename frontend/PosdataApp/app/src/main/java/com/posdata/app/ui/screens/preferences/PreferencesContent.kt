@@ -109,7 +109,7 @@ fun PreferencesContent(
             )
             PosdataColorOptionSwitch(
                 color = DarkPrimary,
-                label = "oscuro",
+                label = "Oscuro",
                 isSelected = preferences.colorScheme == AppColorScheme.DARK,
                 onClick = { viewModel.updateColorScheme(AppColorScheme.DARK) }
             )

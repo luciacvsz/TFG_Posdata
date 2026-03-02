@@ -11,12 +11,8 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.posdata.app.data.local.UserDataStore
 import com.posdata.app.data.remote.RetrofitClient
-import com.posdata.app.data.remote.request.CloudSMSPOSTRequest
-import com.posdata.app.data.remote.request.LocalUserPATCHRequest
-import com.posdata.app.data.remote.response.ResultsDTO
 import com.posdata.app.data.remote.response.CloudSMSGETResponse
-import com.posdata.app.data.repository.CloudCosts
-import com.posdata.app.data.repository.TokenConsumptionRepository
+import com.posdata.app.data.remote.response.ResultsDTO
 import com.posdata.app.model.AppExhaustivity
 import com.posdata.app.model.AppExplanationMode
 import com.posdata.app.model.AppNotificationSound
@@ -25,106 +21,74 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
 /**
- * Background worker responsible for submitting an incoming SMS to the cloud
- * smishing analysis service and displaying a notification with the result.
+ * Background worker responsible for polling the cloud smishing analysis service
+ * for a previously submitted SMS result and displaying a notification with the verdict.
  *
- * Triggered by [SMSReceiver] via WorkManager whenever an SMS is received.
- * Runs as a [CoroutineWorker] to support suspend functions and coroutine-based delays.
+ * Enqueued by [SMishingPostWorker] after a successful POST. Runs as a [CoroutineWorker]
+ * to support suspend functions and coroutine-based delays.
  *
  * ## Analysis flow
- * 1. Verifies the user is authenticated and has sufficient tokens.
- * 2. Deducts the [CloudCosts.POST_SMS] token cost from the local database.
- * 3. Submits the SMS to the cloud via POST and retrieves the execution ID.
- * 4. Polls the cloud via GET until the result is available or the attempt limit is reached.
- * 5. Displays a notification based on the verdict and the user's preferences.
+ * 1. Validates required input data (sender, message, execution ID).
+ * 2. Waits 2 seconds before polling to allow the cloud service to process the request.
+ * 3. Polls the cloud via GET using the provided execution ID.
+ * 4. Displays a notification based on the verdict and the user's preferences.
  *
- * Returns [Result.retry] on transient failures (network errors, cloud not ready)
- * and [Result.failure] on permanent failures (insufficient tokens, missing input data).
+ * Retries up to [_maxAttempts] times using the backoff policy configured by
+ * [SMishingPostWorker]. Returns [Result.failure] if the attempt limit is exceeded
+ * or required input data is missing.
  */
-class SMishingAnalysisWorker(
-        context: Context,
-        workerParams: WorkerParameters
-) : CoroutineWorker(context, workerParams) {
-
+class SMishingPollingWorker(
+    context: Context,
+    params: WorkerParameters
+) : CoroutineWorker(context, params) {
+    private val _maxAttempts = 5
     private val cloudApi = RetrofitClient.cloudInstance
-    private val localApi = RetrofitClient.localInstance
     private val userInfo = UserDataStore(applicationContext)
-    private val tokenConsumptionRepository = TokenConsumptionRepository(userInfo)
 
     /**
-     * Executes the smishing analysis flow.
+     * Executes the polling and notification flow.
      *
      * Expects the following input data keys:
      * - `SENDER`: phone number or identifier of the SMS sender.
      * - `MESSAGE`: raw text content of the SMS message.
+     * - `EXECUTION_ID`: cloud execution ID obtained from [SMishingPostWorker].
      *
-     * @return [Result.success] if the analysis completed and the notification was shown;
-     *         [Result.retry] if a transient error occurred;
-     *         [Result.failure] if a permanent error occurred.
+     * @return [Result.success] if the analysis result was retrieved and the notification
+     *         was handled;
+     *         [Result.retry] if the cloud response was unsuccessful or unavailable;
+     *         [Result.failure] if the maximum attempt count was reached or required
+     *         input data is missing.
      */
     override suspend fun doWork(): Result {
-        val userData = userInfo.userData.first()
 
-        if (!userData.isLoggedIn ) {
+        if (runAttemptCount >= _maxAttempts) {
             return Result.failure()
         }
 
         val sender = inputData.getString("SENDER") ?: return Result.failure()
         val message = inputData.getString("MESSAGE") ?: return Result.failure()
+        val executionId = inputData.getString("EXECUTION_ID") ?: return Result.failure()
 
-        return try {
-            val tokenResult1 = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.POST_SMS)
-            if (tokenResult1.isFailure) {
-                Log.e("SMishingWorker", "Insufficient tokens to analyze SMS")
-                return Result.failure()
-            }
+        val userData = userInfo.userData.first()
 
-            val tokenPatchResponse = localApi.patchUser(
-                userId  = userData.userId,
-                request = LocalUserPATCHRequest(tokens = userData.tokens)
-            )
-            if (!tokenPatchResponse.isSuccessful || tokenPatchResponse.body() == null) {
-                Log.e("SMishingWorker", "Failed to update token balance in local database")
-                return Result.failure()
-            }
+        delay(2000)
 
-            val postResponse = cloudApi.postSMS(
-                userId  = userData.userId,
-                request = CloudSMSPOSTRequest(sender, message)
-            )
-            if (!postResponse.isSuccessful || postResponse.body() == null) {
-                return Result.retry()
-            }
+        val getResponse =
+            cloudApi.getSMS(userData.userId, executionId)
+        Log.d("SMishingPolling", "Raw body: ${getResponse.body()}")
 
-            val executionId = postResponse.body()!!.executionId
-
-            var analysisResult: CloudSMSGETResponse? = null
-            var attempts = 0
-            val maxAttempts = 5
-
-            while(attempts < maxAttempts) {
-                delay(2000)
-
-                val getResponse = cloudApi.getSMS(userData.userId, executionId)
-                if (getResponse.isSuccessful && getResponse.body() != null) {
-                    analysisResult = getResponse.body()
-                    break
-                }
-
-                attempts++
-            }
-
-            if (analysisResult == null){
-                return Result.retry()
-            }
-
-            handleNotification(userData.preferences, sender, message, analysisResult)
-
-            Result.success()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Result.retry()
+        if (!getResponse.isSuccessful || getResponse.body() == null) {
+            return Result.retry()
         }
+
+        handleNotification(
+            userData.preferences,
+            sender,
+            message,
+            getResponse.body()!!
+        )
+
+        return Result.success()
     }
 
     /**
@@ -146,7 +110,7 @@ class SMishingAnalysisWorker(
         results: CloudSMSGETResponse
     ) {
         val dto: ResultsDTO = results.results
-        val isThreat = dto.verdict == "MALICIOUS" || dto.verdict == "SUSPICIOUS"
+        val isThreat = dto.verdict == "malicious" || dto.verdict == "suspicious"
 
         val shouldNotify = when (preferences.exhaustivity) {
             AppExhaustivity.REGULAR  -> isThreat
@@ -190,23 +154,23 @@ class SMishingAnalysisWorker(
         val channelId = "posdata_analysis_channel"
 
         val title = when (results.verdict) {
-            "MALICIOUS"  -> "⚠️ ¡Amenaza Detectada!"
-            "SUSPICIOUS" -> "⚠️ Mensaje Sospechoso"
+            "malicious"  -> "⚠️ ¡Amenaza Detectada!"
+            "suspicious" -> "⚠️ Mensaje Sospechoso"
             else         -> "✅ Mensaje Seguro"
         }
 
         val icon = when (results.verdict) {
-            "MALICIOUS", "SUSPICIOUS" -> android.R.drawable.stat_sys_warning
+            "malicious", "suspicious" -> android.R.drawable.stat_sys_warning
             else                      -> android.R.drawable.ic_dialog_info
         }
 
         val colorAccent = when (results.verdict) {
-            "MALICIOUS"  -> Color.RED
-            "SUSPICIOUS" -> Color.YELLOW
+            "malicious"  -> Color.RED
+            "suspicious" -> Color.YELLOW
             else         -> Color.GREEN
         }
 
-        val isThreat = results.verdict == "MALICIOUS" || results.verdict == "SUSPICIOUS"
+        val isThreat = results.verdict == "malicious" || results.verdict == "SUSPICIOUS"
 
         val shortText = "De: $sender — ${results.reason}"
 

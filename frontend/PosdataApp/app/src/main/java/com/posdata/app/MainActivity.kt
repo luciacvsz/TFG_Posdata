@@ -52,8 +52,6 @@ import com.posdata.app.ui.screens.trusted_contacts.TrustedContactsViewModelFacto
 class MainActivity : ComponentActivity() {
 
     private lateinit var userDataStore: UserDataStore
-    private lateinit var profileViewModel: ProfileViewModel
-    private lateinit var trustedContactsViewModel: TrustedContactsViewModel
     private lateinit var preferencesViewModel: PreferencesViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
