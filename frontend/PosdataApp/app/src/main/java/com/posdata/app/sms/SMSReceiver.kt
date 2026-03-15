@@ -73,13 +73,13 @@ class SMSReceiver : BroadcastReceiver() {
             .setInputData(data)
             .setBackoffCriteria(
                 androidx.work.BackoffPolicy.EXPONENTIAL,
-                10_000,
+                3_000,
                 java.util.concurrent.TimeUnit.MILLISECONDS
             )
 
             .build()
 
-        val uniqueWorkName = "sms_analysis_${message.hashCode()}"
+        val uniqueWorkName = "sms_analysis_${System.currentTimeMillis()}_${message.hashCode()}"
 
         WorkManager.getInstance(context).enqueueUniqueWork(
             uniqueWorkName,

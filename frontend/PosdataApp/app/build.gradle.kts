@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.room.compiler)
+    implementation(libs.androidx.room3.runtime)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

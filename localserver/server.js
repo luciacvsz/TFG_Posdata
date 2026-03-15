@@ -14,25 +14,39 @@ app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
 
-const USER_DELETE_QUERY = "DELETE FROM users WHERE user_id = ?";
+const USER_DEACTIVATE_QUERY =
+  "UPDATE users SET is_active = 0 WHERE user_id = ?";
 const USER_GET_QUERY = "SELECT email FROM users WHERE email = ?";
 const USER_UPDATE_EMAIL_QUERY = "UPDATE users SET email = ? WHERE user_id = ?";
 const USER_PASSWORD_UPDATE_QUERY =
   "UPDATE users SET password = ? WHERE user_id = ?";
-const USER_TOKENS_UPDATE_QUERY =
-  "UPDATE users SET tokens = ? WHERE user_id = ?";
+const USER_TOKENS_GET_QUERY = "SELECT tokens FROM users WHERE user_id = ?";
+const USER_TOKENS_DEDUCT_QUERY =
+  "UPDATE users SET tokens = tokens - ? WHERE user_id = ? AND tokens >= ?";
 const LOGIN_POST_QUERY = "SELECT * FROM users WHERE email = ?";
-const USER_POST_QUERY = `INSERT INTO users (user_id, email, password, tokens, is_active) VALUES (?, ?, ?, ?, 1)`;
+const USER_PUT_QUERY = `INSERT INTO users (user_id, email, password, tokens, is_active) VALUES (?, ?, ?, ?, 1)`;
+
+const db = mysql.createConnection({
+  host: "localhost",
+  user: "root",
+  password: "",
+  database: "posdata_db",
+});
+
+db.connect((err) => {
+  if (err) throw err;
+  console.log("Connected to MySQL Database");
+});
 
 app.delete("/users/:user_id", (req, res) => {
   const { user_id } = req.params;
 
-  db.query(USER_DELETE_QUERY, [user_id], (err, result) => {
+  db.query(USER_DEACTIVATE_QUERY, [user_id], (err, result) => {
     if (err) {
-      console.error("Error while deleting user:", err);
+      console.error("Error while deactivating user:", err);
       return res.status(500).json({
         success: false,
-        message: "Error deleting user in local database",
+        message: "Error deactivating user in local database",
       });
     }
 
@@ -45,7 +59,7 @@ app.delete("/users/:user_id", (req, res) => {
 
     res.json({
       success: true,
-      message: "User deleted successfully",
+      message: "User deactivated successfully",
     });
   });
 });
@@ -78,7 +92,7 @@ app.get("/users/:email", (req, res) => {
 
 app.patch("/users/:user_id", async (req, res) => {
   const { user_id } = req.params;
-  const { email, password, tokens } = req.body;
+  const { email, password } = req.body;
 
   try {
     if (email) {
@@ -134,30 +148,6 @@ app.patch("/users/:user_id", async (req, res) => {
         },
       );
     }
-
-    if (tokens) {
-      db.query(USER_TOKENS_UPDATE_QUERY, [tokens, user_id], (err, result) => {
-        if (err) {
-          console.error("Error updating tokens:", err);
-          return res.status(500).json({
-            success: false,
-            message: "Error updating tokens in local database",
-          });
-        }
-
-        if (result.affectedRows != 1) {
-          return res.status(404).json({
-            success: false,
-            message: "User not found",
-          });
-        }
-
-        return res.json({
-          success: true,
-          message: "Tokens updated successfully",
-        });
-      });
-    }
   } catch (err) {
     console.error("Error processing password:", err);
     return res.status(500).json({
@@ -165,6 +155,77 @@ app.patch("/users/:user_id", async (req, res) => {
       message: "Error processing password",
     });
   }
+});
+
+const CLOUD_COSTS = {
+  POST_SMS: 3,
+  GET_USER: 10,
+  PATCH_USER: 8,
+  DELETE_USER: 1,
+};
+
+app.patch("/users/:user_id/tokens", (req, res) => {
+  const { user_id } = req.params;
+  const { operation } = req.body;
+
+  if (!operation || !CLOUD_COSTS[operation]) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid operation",
+    });
+  }
+
+  const cost = CLOUD_COSTS[operation];
+
+  db.query(USER_TOKENS_GET_QUERY, [user_id], (err, results) => {
+    if (err) {
+      console.error("Error consulting tokens:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Error consulting token balance",
+      });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const currentTokens = results[0].tokens;
+
+    if (currentTokens < cost) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Insufficient token balance. Please contact the service administrator.",
+      });
+    }
+
+    db.query(USER_TOKENS_DEDUCT_QUERY, [cost, user_id, cost], (err, result) => {
+      if (err) {
+        console.error("Error consulting tokens:", err);
+        return res.status(500).json({
+          success: false,
+          message: "Error consulting token balance",
+        });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Insufficient token balance. Please contact the service administrator.",
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Tokens deducted successfully",
+      });
+    });
+  });
 });
 
 app.post("/login", (req, res) => {
@@ -210,7 +271,7 @@ app.post("/login", (req, res) => {
   });
 });
 
-app.post("/users/:user_id", async (req, res) => {
+app.put("/users/:user_id", async (req, res) => {
   const { user_id } = req.params;
   const { email, password } = req.body;
 
@@ -218,7 +279,7 @@ app.post("/users/:user_id", async (req, res) => {
     const secureHash = await bcrypt.hash(password, saltRounds);
 
     db.query(
-      USER_POST_QUERY,
+      USER_PUT_QUERY,
       [user_id, email, secureHash, INITIAL_TOKENS],
       (err, result) => {
         if (err) {
@@ -243,16 +304,4 @@ app.post("/users/:user_id", async (req, res) => {
       message: "Error processing password",
     });
   }
-});
-
-const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "",
-  database: "posdata_db",
-});
-
-db.connect((err) => {
-  if (err) throw err;
-  console.log("Connected to MySQL Database");
 });

@@ -188,10 +188,7 @@ class SMishingPollingWorker(
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = if (notificationSound == AppNotificationSound.ON)
-                NotificationManager.IMPORTANCE_HIGH
-            else
-                NotificationManager.IMPORTANCE_LOW
+            val importance = NotificationManager.IMPORTANCE_HIGH
 
             val channel = NotificationChannel(channelId, "Análisis de SMS", importance).apply {
                 description = "Notificaciones de seguridad de mensajes"
@@ -214,10 +211,7 @@ class SMishingPollingWorker(
             .setColor(colorAccent)
             .setAutoCancel(true)
             .setPriority(
-                if (notificationSound == AppNotificationSound.ON)
-                    NotificationCompat.PRIORITY_HIGH
-                else
-                    NotificationCompat.PRIORITY_LOW
+                NotificationCompat.PRIORITY_DEFAULT
             )
             .apply {
                 if (notificationSound == AppNotificationSound.ON) {

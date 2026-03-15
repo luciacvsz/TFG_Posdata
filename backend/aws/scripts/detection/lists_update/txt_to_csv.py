@@ -1,8 +1,6 @@
 import csv
 import os
 
-# REVISAR SI HAY QUE PONER COSAS A LIMPIO DE AQUÍ
-
 TXT_FILENAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inputs', 'txt', 'SMS_Blacklist_OP31012026.txt')
 CSV_FILENAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'inputs', 'csv', 'SMS_Blacklist_OP31012026.csv')
 DESCRIPTION = 'OpenPhish'

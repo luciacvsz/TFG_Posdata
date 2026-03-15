@@ -1,15 +1,16 @@
 package com.posdata.app.ui.screens.login
 
 import android.content.Context
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.posdata.app.data.local.UserDataStore
 import com.posdata.app.data.remote.RetrofitClient
 import com.posdata.app.data.repository.LoginRepository
+import com.posdata.app.data.repository.TokenConsumptionRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -29,7 +30,7 @@ data class LoginState(
  * ViewModel for the login screen.
  *
  * Manages the [LoginState] and delegates the login operation to [LoginRepository].
- * Exposes [state] as a Compose-observable property so the UI recomposes
+ * Exposes [uiState] as a [StateFlow] so the UI can collect it and recompose
  * automatically on every state change.
  *
  * @param repository Repository responsible for the login and sync flow.
@@ -38,32 +39,32 @@ class LoginViewModel(
     private val repository: LoginRepository
 ) : ViewModel() {
 
-    var state by mutableStateOf(LoginState())
-        private set
+    private val _uiState = MutableStateFlow(LoginState())
+    val uiState: StateFlow<LoginState> = _uiState.asStateFlow()
 
     /**
      * Initiates the login flow with the given credentials.
      *
      * Validates that neither field is blank before proceeding.
-     * Updates [state] to reflect the loading, success, or failure outcome.
+     * Updates [uiState] to reflect the loading, success, or failure outcome.
      *
      * @param email Email address entered by the user.
      * @param password Plain-text password entered by the user.
      */
     fun login(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()){
-            state = state.copy(errorMessage = "Por favor, rellene todos los campos")
+        if (email.isBlank() || password.isBlank()) {
+            _uiState.value = _uiState.value.copy(errorMessage = "Por favor, rellena todos los campos")
             return
         }
 
         viewModelScope.launch {
-            state = state.copy(isLogging = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(isLogging = true, errorMessage = null)
 
             val result = repository.performLoginAndSync(email, password)
 
-            state = result.fold(
-                onSuccess = { state.copy(isLogging = false, isSuccess = true) },
-                onFailure = { error -> state.copy(isLogging = false, errorMessage = error.message) }
+            _uiState.value = result.fold(
+                onSuccess = { _uiState.value.copy(isLogging = false, isSuccess = true) },
+                onFailure = { error -> _uiState.value.copy(isLogging = false, errorMessage = error.message) }
             )
         }
     }
@@ -72,7 +73,7 @@ class LoginViewModel(
      * Clears the current error message, dismissing the error dialog.
      */
     fun dismissError() {
-        state = state.copy(errorMessage = null)
+        _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 }
 
@@ -92,8 +93,9 @@ class LoginViewModelFactory(private val context: Context) : ViewModelProvider.Fa
             val userInfo = UserDataStore(context)
             val localApi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
+            val tokenConsumptionRepository = TokenConsumptionRepository(userInfo, localApi)
 
-            val repository = LoginRepository(context, localApi, cloudApi, userInfo)
+            val repository = LoginRepository(context, localApi, cloudApi, userInfo, tokenConsumptionRepository)
 
             @Suppress("UNCHECKED_CAST")
             return LoginViewModel(repository) as T

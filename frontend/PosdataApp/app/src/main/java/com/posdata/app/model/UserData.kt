@@ -9,7 +9,6 @@ package com.posdata.app.model
  *
  * @param isLoggedIn Whether the user currently has an active session.
  * @param userId Unique identifier of the authenticated user.
- * @param tokens Current token balance available for cloud operations.
  * @param fullName Full name of the user.
  * @param contact Contact details of the user.
  * @param preferences Current application preferences of the user.
@@ -18,7 +17,6 @@ package com.posdata.app.model
 data class UserData(
     val isLoggedIn: Boolean,
     val userId: String,
-    val tokens: Int,
     val fullName: String,
     val contact: Contact,
     val preferences: AppPreferences,

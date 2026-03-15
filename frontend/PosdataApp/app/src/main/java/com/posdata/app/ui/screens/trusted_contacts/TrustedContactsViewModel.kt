@@ -137,11 +137,11 @@ class TrustedContactsViewModelFactory(private val context: Context) : ViewModelP
         if (modelClass.isAssignableFrom(TrustedContactsViewModel::class.java)) {
             val userInfo = UserDataStore(context)
 
-            val localAPi = RetrofitClient.localInstance
+            val localApi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
-            val tokenConsumptionRepository = TokenConsumptionRepository(userInfo)
+            val tokenConsumptionRepository = TokenConsumptionRepository(userInfo, localApi)
 
-            val repository = UserUpdateRepository(localAPi, cloudApi, userInfo, tokenConsumptionRepository)
+            val repository = UserUpdateRepository(localApi, cloudApi, userInfo, tokenConsumptionRepository)
 
             @Suppress("UNCHECKED_CAST")
             return TrustedContactsViewModel(repository) as T

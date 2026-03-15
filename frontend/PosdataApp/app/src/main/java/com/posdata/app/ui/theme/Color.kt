@@ -1,5 +1,7 @@
 package com.posdata.app.ui.theme
 
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 val LightPrimary = Color(0xFF0369A1)
@@ -152,3 +154,166 @@ val GrayscaleErrorContainer = Color(0xFFE5E5E5)
 val GrayscaleOnErrorContainer = Color(0xFF000000)
 val GrayscaleOutline = Color(0xFF737373)
 val GrayscaleOutlineVariant = Color(0xFFA3A3A3)
+
+val LightColorScheme = lightColorScheme(
+    primary = LightPrimary,
+    onPrimary = LightOnPrimary,
+    primaryContainer = LightPrimaryContainer,
+    onPrimaryContainer = LightOnPrimaryContainer,
+    secondary = LightSecondary,
+    onSecondary = LightOnSecondary,
+    secondaryContainer = LightSecondaryContainer,
+    onSecondaryContainer = LightOnSecondaryContainer,
+    tertiary = LightTertiary,
+    onTertiary = LightOnTertiary,
+    tertiaryContainer = LightTertiaryContainer,
+    onTertiaryContainer = LightOnTertiaryContainer,
+    background = LightBackground,
+    onBackground = LightOnBackground,
+    surface = LightSurface,
+    onSurface = LightOnSurface,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurfaceVariant,
+    error = LightError,
+    onError = LightOnError,
+    errorContainer = LightErrorContainer,
+    onErrorContainer = LightOnErrorContainer,
+    outline = LightOutline,
+    outlineVariant = LightOutlineVariant,
+    scrim = LightScrim
+)
+
+val DarkColorScheme = darkColorScheme(
+    primary = DarkPrimary,
+    onPrimary = DarkOnPrimary,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
+    secondary = DarkSecondary,
+    onSecondary = DarkOnSecondary,
+    secondaryContainer = DarkSecondaryContainer,
+    onSecondaryContainer = DarkOnSecondaryContainer,
+    tertiary = DarkTertiary,
+    onTertiary = DarkOnTertiary,
+    tertiaryContainer = DarkTertiaryContainer,
+    onTertiaryContainer = DarkOnTertiaryContainer,
+    background = DarkBackground,
+    onBackground = DarkOnBackground,
+    surface = DarkSurface,
+    onSurface = DarkOnSurface,
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkOnSurfaceVariant,
+    error = DarkError,
+    onError = DarkOnError,
+    errorContainer = DarkErrorContainer,
+    onErrorContainer = DarkOnErrorContainer,
+    outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant
+)
+
+val HighContrastColorScheme = lightColorScheme(
+    primary = HighContrastPrimary,
+    onPrimary = HighContrastOnPrimary,
+    primaryContainer = HighContrastPrimaryContainer,
+    onPrimaryContainer = HighContrastOnPrimaryContainer,
+    secondary = HighContrastSecondary,
+    onSecondary = HighContrastOnSecondary,
+    secondaryContainer = HighContrastSecondaryContainer,
+    onSecondaryContainer = HighContrastOnSecondaryContainer,
+    tertiary = HighContrastTertiary,
+    onTertiary = HighContrastOnTertiary,
+    tertiaryContainer = HighContrastTertiaryContainer,
+    onTertiaryContainer = HighContrastOnTertiaryContainer,
+    background = HighContrastBackground,
+    onBackground = HighContrastOnBackground,
+    surface = HighContrastSurface,
+    onSurface = HighContrastOnSurface,
+    surfaceVariant = HighContrastSurfaceVariant,
+    onSurfaceVariant = HighContrastOnSurfaceVariant,
+    error = HighContrastError,
+    onError = HighContrastOnError,
+    errorContainer = HighContrastErrorContainer,
+    onErrorContainer = HighContrastOnErrorContainer,
+    outline = HighContrastOutline,
+    outlineVariant = HighContrastOutlineVariant
+)
+
+val RedGreenSafeColorScheme = lightColorScheme(
+    primary = RedGreenSafePrimary,
+    onPrimary = RedGreenSafeOnPrimary,
+    primaryContainer = RedGreenSafePrimaryContainer,
+    onPrimaryContainer = RedGreenSafeOnPrimaryContainer,
+    secondary = RedGreenSafeSecondary,
+    onSecondary = RedGreenSafeOnSecondary,
+    secondaryContainer = RedGreenSafeSecondaryContainer,
+    onSecondaryContainer = RedGreenSafeOnSecondaryContainer,
+    tertiary = RedGreenSafeTertiary,
+    onTertiary = RedGreenSafeOnTertiary,
+    tertiaryContainer = RedGreenSafeTertiaryContainer,
+    onTertiaryContainer = RedGreenSafeOnTertiaryContainer,
+    background = RedGreenSafeBackground,
+    onBackground = RedGreenSafeOnBackground,
+    surface = RedGreenSafeSurface,
+    onSurface = RedGreenSafeOnSurface,
+    surfaceVariant = RedGreenSafeSurfaceVariant,
+    onSurfaceVariant = RedGreenSafeOnSurfaceVariant,
+    error = RedGreenSafeError,
+    onError = RedGreenSafeOnError,
+    errorContainer = RedGreenSafeErrorContainer,
+    onErrorContainer = RedGreenSafeOnErrorContainer,
+    outline = RedGreenSafeOutline,
+    outlineVariant = RedGreenSafeOutlineVariant
+)
+
+val BlueYellowSafeColorScheme = lightColorScheme(
+    primary = BlueYellowSafePrimary,
+    onPrimary = BlueYellowSafeOnPrimary,
+    primaryContainer = BlueYellowSafePrimaryContainer,
+    onPrimaryContainer = BlueYellowSafeOnPrimaryContainer,
+    secondary = BlueYellowSafeSecondary,
+    onSecondary = BlueYellowSafeOnSecondary,
+    secondaryContainer = BlueYellowSafeSecondaryContainer,
+    onSecondaryContainer = BlueYellowSafeOnSecondaryContainer,
+    tertiary = BlueYellowSafeTertiary,
+    onTertiary = BlueYellowSafeOnTertiary,
+    tertiaryContainer = BlueYellowSafeTertiaryContainer,
+    onTertiaryContainer = BlueYellowSafeOnTertiaryContainer,
+    background = BlueYellowSafeBackground,
+    onBackground = BlueYellowSafeOnBackground,
+    surface = BlueYellowSafeSurface,
+    onSurface = BlueYellowSafeOnSurface,
+    surfaceVariant = BlueYellowSafeSurfaceVariant,
+    onSurfaceVariant = BlueYellowSafeOnSurfaceVariant,
+    error = BlueYellowSafeError,
+    onError = BlueYellowSafeOnError,
+    errorContainer = BlueYellowSafeErrorContainer,
+    onErrorContainer = BlueYellowSafeOnErrorContainer,
+    outline = BlueYellowSafeOutline,
+    outlineVariant = BlueYellowSafeOutlineVariant
+)
+
+val GrayscaleColorScheme = lightColorScheme(
+    primary = GrayscalePrimary,
+    onPrimary = GrayscaleOnPrimary,
+    primaryContainer = GrayscalePrimaryContainer,
+    onPrimaryContainer = GrayscaleOnPrimaryContainer,
+    secondary = GrayscaleSecondary,
+    onSecondary = GrayscaleOnSecondary,
+    secondaryContainer = GrayscaleSecondaryContainer,
+    onSecondaryContainer = GrayscaleOnSecondaryContainer,
+    tertiary = GrayscaleTertiary,
+    onTertiary = GrayscaleOnTertiary,
+    tertiaryContainer = GrayscaleTertiaryContainer,
+    onTertiaryContainer = GrayscaleOnTertiaryContainer,
+    background = GrayscaleBackground,
+    onBackground = GrayscaleOnBackground,
+    surface = GrayscaleSurface,
+    onSurface = GrayscaleOnSurface,
+    surfaceVariant = GrayscaleSurfaceVariant,
+    onSurfaceVariant = GrayscaleOnSurfaceVariant,
+    error = GrayscaleError,
+    onError = GrayscaleOnError,
+    errorContainer = GrayscaleErrorContainer,
+    onErrorContainer = GrayscaleOnErrorContainer,
+    outline = GrayscaleOutline,
+    outlineVariant = GrayscaleOutlineVariant
+)

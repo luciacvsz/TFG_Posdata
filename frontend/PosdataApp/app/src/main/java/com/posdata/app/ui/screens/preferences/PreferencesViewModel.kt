@@ -199,7 +199,7 @@ class PreferencesViewModelFactory(private val context: Context) : ViewModelProvi
             val userInfo = UserDataStore(context)
             val localApi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
-            val tokenConsumptionRepository = TokenConsumptionRepository(userInfo)
+            val tokenConsumptionRepository = TokenConsumptionRepository(userInfo, localApi)
 
             val repository = UserUpdateRepository(localApi, cloudApi, userInfo, tokenConsumptionRepository)
 

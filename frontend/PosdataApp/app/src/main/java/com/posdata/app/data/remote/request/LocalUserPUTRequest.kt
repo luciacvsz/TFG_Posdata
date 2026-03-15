@@ -10,7 +10,7 @@ import com.google.gson.annotations.SerializedName
  * @param email Email address of the user.
  * @param password Plain-text password of the user.
  */
-data class LocalUserPOSTRequest(
+data class LocalUserPUTRequest(
     @SerializedName("email") val email: String,
     @SerializedName("password") val password: String
 )

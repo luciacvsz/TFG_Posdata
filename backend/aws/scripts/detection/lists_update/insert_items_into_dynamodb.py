@@ -76,6 +76,17 @@ def process_csv_and_upload(bucket: str, key: str) -> int:
         logger.error(f"Error parsing CSV and uploading to DynamoDB: {e}")
         raise
 
+def delete_csv(bucket_name: str, file_key: str) -> None:
+    '''
+    Delete a CSV file from the S3 bucket.
+
+    Parameters
+    ----------
+    file_key : str
+        The S3 file key of the CSV file to be deleted.
+    '''
+    s3.delete_object(Bucket=bucket_name, Key=file_key)
+
 def lambda_handler(event, context):
     '''
     AWS Lambda handler to process S3 event, read CSV file, and insert data into DynamoDB.
@@ -109,6 +120,7 @@ def lambda_handler(event, context):
 
             logger.info(f"Processing file {key} from bucket {bucket}")
             total_processed += process_csv_and_upload(bucket, key)
+            delete_csv(bucket, key)
         
         return create_response({'message': f'Successfully processed {total_processed} records from the provided files.'}, status_code=200)
     

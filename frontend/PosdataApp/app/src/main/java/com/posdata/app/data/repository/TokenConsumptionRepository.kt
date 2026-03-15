@@ -1,28 +1,11 @@
 package com.posdata.app.data.repository
 
 import com.posdata.app.data.local.UserDataStore
+import com.posdata.app.data.remote.LocalApiService
+import com.posdata.app.data.remote.request.LocalUserTokensPATCHRequest
 import com.posdata.app.data.repository.contract.TokenConsumptionRepositoryContract
-
-/**
- * Defines the token cost of each operation that requires cloud resources.
- *
- * Costs are designed around an initial balance of 100 tokens per user,
- * allowing approximately 10-15 SMS analyses before a top-up is required.
- *
- * Cost rationale:
- * - [POST_SMS] and [GET_SMS] invoke the AI model on AWS and represent the core
- *   functionality of the app.
- * - [PATCH_USER] covers profile, preferences and contact updates.
- * - [DELETE_USER] is a one-time destructive operation; cost is irrelevant
- *   since the account is removed immediately after.
- */
-object CloudCosts {
-    const val POST_SMS    = 3   // Submits an SMS for AI analysis
-    const val GET_SMS     = 3   // Retrieves analysis result (no extra AI cost)
-    const val PATCH_USER  = 8   // Updates profile, preferences or contacts
-    const val DELETE_USER = 1   // Deletes the account from both services
-}
-
+import com.posdata.app.model.CloudOperation
+import kotlinx.coroutines.flow.first
 
 /**
  * Repository responsible for verifying and consuming the user's token balance
@@ -31,28 +14,46 @@ object CloudCosts {
  * Acts as a gatekeeper: all repositories that interact with paid cloud resources
  * must call [haveEnoughTokens] before proceeding.
  *
- * @param userInfo Local data source used to read and update the token balance.
+ * @param userInfo Local data source used to read the current user session.
+ * @param localApi API client used to communicate with the local authentication server.
  */
 class TokenConsumptionRepository(
     private val userInfo: UserDataStore,
+    private val localApi: LocalApiService
 ): TokenConsumptionRepositoryContract {
 
     /**
-     * Verifies that the user has sufficient tokens and deducts the given amount.
+     * Verifies that the user has sufficient tokens and deducts the corresponding amount
+     * for the given operation on the local authentication server.
      *
-     * The check and deduction are performed atomically by [UserDataStore.tryConsumeTokens],
+     * The check and deduction are performed atomically on the server side,
      * preventing race conditions if multiple operations are triggered simultaneously.
      *
-     * @param tokens Number of tokens required for the operation.
+     * @param operation The billable cloud operation to perform.
+     * @param userId Optional user ID to use when the session is not yet available,
+     * such as during the login sync flow. If null, the ID is read from the local session.
      * @return [Result.success] if the tokens were consumed successfully;
-     *         [Result.failure] if the balance was insufficient.
+     * [Result.failure] if the balance was insufficient or an error occurred.
      */
-    override suspend fun haveEnoughTokens(tokens: Int): Result<String> {
-        if (!userInfo.tryConsumeTokens(tokens)) {
+    override suspend fun haveEnoughTokens(operation: CloudOperation, userId: String?): Result<String> {
+        val resolvedUserId = userId
+            ?: userInfo.userData.first().userId
+            ?: return Result.failure(Exception("No hay ninguna sesión activa"))
+
+        val response = try {
+            localApi.patchUserTokens(resolvedUserId, LocalUserTokensPATCHRequest(operation.name))
+        } catch (e: Exception) {
+            return Result.failure(Exception("Ha ocurrido un error inesperado al verificar el saldo de tokens"))
+        }
+
+        val body = response.body()
+
+        if (!response.isSuccessful || body == null || !body.success) {
             return Result.failure(
-                Exception("Insufficient token balance. Please contact the service administrator.")
+                Exception(body?.message ?: "No se ha podido verificar el saldo de tokens")
             )
         }
-        return Result.success("Token balance updated successfully")
+
+        return Result.success("Tokens descontados correctamente")
     }
 }

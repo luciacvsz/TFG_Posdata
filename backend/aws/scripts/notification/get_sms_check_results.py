@@ -2,7 +2,6 @@ import boto3
 import json
 import logging
 import os
-from common.database import check_user_exists
 from common.responses import create_response
 
 # Setup logging
@@ -79,9 +78,6 @@ def lambda_handler(event, context):
 
         user_id = event['pathParameters']['user_id']
         execution_id = event['pathParameters']['execution_id']
-
-        if not check_user_exists(user_id, table):
-            raise ValueError("User ID is required and must exist.")
         
         results, file_key = get_user_sms_results(user_id, execution_id)
         if results is None:

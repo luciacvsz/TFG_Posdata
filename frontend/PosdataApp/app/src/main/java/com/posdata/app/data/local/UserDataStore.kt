@@ -29,7 +29,6 @@ class UserDataStore(private val context: Context) {
         // --- Session keys ---
         val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
         val USER_ID = stringPreferencesKey("user_id")
-        val TOKENS = intPreferencesKey("tokens")
 
         // --- Profile keys ---
         val FULL_NAME = stringPreferencesKey("full_name")
@@ -54,7 +53,6 @@ class UserDataStore(private val context: Context) {
      * All writes are executed in a single atomic transaction via [edit].
      *
      * @param userId Unique identifier of the authenticated user.
-     * @param tokens Initial token balance associated with the account.
      * @param fullName Full name of the user.
      * @param contact Contact details: phone number and email address.
      * @param preferences Application preferences. Null fields are replaced by default values.
@@ -62,7 +60,6 @@ class UserDataStore(private val context: Context) {
      */
     suspend fun saveUserSession(
         userId: String?,
-        tokens: Int,
         fullName: String,
         contact: Contact,
         preferences: AppPreferences,
@@ -73,7 +70,6 @@ class UserDataStore(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[IS_LOGGED_IN] = true
             prefs[USER_ID] = userId ?: ""
-            prefs[TOKENS] = tokens
 
             prefs[FULL_NAME] = fullName
             prefs[PHONE_NUMBER] = contact.phoneNumber
@@ -153,32 +149,6 @@ class UserDataStore(private val context: Context) {
     }
 
     /**
-     * Attempts to deduct the given amount from the user's token balance.
-     *
-     * The read and write are performed in a single atomic operation via [updateData],
-     * ensuring no race conditions occur.
-     *
-     * @param amount Number of tokens to consume.
-     * @return `true` if the balance was sufficient and has been deducted;
-     *         `false` if the balance was insufficient and remains unchanged.
-     */
-    suspend fun tryConsumeTokens(amount: Int): Boolean {
-        var success = false
-        context.dataStore.updateData { prefs ->
-            val current = prefs[TOKENS] ?: 0
-            if (current >= amount) {
-                success = true
-                prefs.toMutablePreferences().apply {
-                    this[TOKENS] = current - amount
-                }
-            } else {
-                prefs
-            }
-        }
-        return success
-    }
-
-    /**
      * Clears all persisted data, invalidating the current session.
      */
     suspend fun clearSession() {
@@ -219,7 +189,6 @@ class UserDataStore(private val context: Context) {
         UserData(
             isLoggedIn = prefs[IS_LOGGED_IN] ?: false,
             userId = prefs[USER_ID] ?: "",
-            tokens = prefs[TOKENS] ?: 0,
             fullName = prefs[FULL_NAME] ?: "",
             contact = contact,
             preferences = preferences,

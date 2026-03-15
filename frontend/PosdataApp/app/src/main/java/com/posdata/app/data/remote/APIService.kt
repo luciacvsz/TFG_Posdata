@@ -4,25 +4,28 @@ import com.posdata.app.data.remote.request.CloudPreferencesPATCHRequest
 import com.posdata.app.data.remote.request.LocalLoginPOSTRequest
 import com.posdata.app.data.remote.response.LocalLoginPOSTResponse
 import com.posdata.app.data.remote.response.LocalUserGETResponse
-import com.posdata.app.data.remote.request.LocalUserPOSTRequest
-import com.posdata.app.data.remote.response.LocalUserPOSTResponse
+import com.posdata.app.data.remote.request.LocalUserPUTRequest
+import com.posdata.app.data.remote.response.LocalUserPUTResponse
 import com.posdata.app.data.remote.response.CloudUsersGETResponse
 import com.posdata.app.data.remote.request.CloudProfilePATCHRequest
 import com.posdata.app.data.remote.request.LocalUserPATCHRequest
 import com.posdata.app.data.remote.request.CloudSMSPOSTRequest
 import com.posdata.app.data.remote.request.CloudTrustedContactsPATCHRequest
 import com.posdata.app.data.remote.request.CloudUsersPOSTRequest
+import com.posdata.app.data.remote.request.LocalUserTokensPATCHRequest
 import com.posdata.app.data.remote.response.CloudSMSGETResponse
 import com.posdata.app.data.remote.response.LocalUserDELETEResponse
 import com.posdata.app.data.remote.response.LocalUserPATCHResponse
 import com.posdata.app.data.remote.response.CloudSMSPOSTResponse
 import com.posdata.app.data.remote.response.CloudUsersPOSTResponse
+import com.posdata.app.data.remote.response.LocalUserTokensPATCHResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 
 /**
@@ -65,6 +68,15 @@ interface LocalApiService {
     suspend fun patchUser(@Path("user_id") userId: String, @Body request: LocalUserPATCHRequest): Response<LocalUserPATCHResponse>
 
     /**
+     * Deducts tokens from the local user record for the given operation.
+     *
+     * @param userId Unique identifier of the user.
+     * @param request The operation to perform, used to determine the token cost.
+     */
+    @PATCH("/users/{user_id}/tokens")
+    suspend fun patchUserTokens(@Path("user_id") userId: String, @Body request: LocalUserTokensPATCHRequest): Response<LocalUserTokensPATCHResponse>
+
+    /**
      * Authenticates a user against the local server.
      *
      * @param request User credentials.
@@ -82,8 +94,8 @@ interface LocalApiService {
      * @param userId Unique identifier assigned by the cloud service.
      * @param request User credentials to store locally.
      */
-    @POST("/users/{user_id}")
-    suspend fun postUser(@Path("user_id") userId: String, @Body request: LocalUserPOSTRequest): Response<LocalUserPOSTResponse>
+    @PUT("/users/{user_id}")
+    suspend fun putUser(@Path("user_id") userId: String, @Body request: LocalUserPUTRequest): Response<LocalUserPUTResponse>
 }
 
 /**
@@ -176,7 +188,7 @@ interface CloudApiService {
      *
      * Returns the [userId][CloudUsersPOSTResponse.userId] assigned by the cloud,
      * which must subsequently be used to create the corresponding local user
-     * record via [LocalApiService.postUser].
+     * record via [LocalApiService.putUser].
      *
      * @param request Profile data of the user to register.
      */

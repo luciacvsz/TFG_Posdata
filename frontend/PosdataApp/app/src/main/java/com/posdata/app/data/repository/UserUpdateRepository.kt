@@ -4,6 +4,7 @@ import com.posdata.app.data.local.UserDataStore
 import com.posdata.app.data.remote.CloudApiService
 import com.posdata.app.data.remote.LocalApiService
 import com.posdata.app.data.remote.request.*
+import com.posdata.app.data.repository.contract.TokenConsumptionRepositoryContract
 import com.posdata.app.data.repository.contract.UserUpdateRepositoryContract
 import com.posdata.app.model.*
 import com.posdata.app.utils.HashUtils
@@ -25,7 +26,7 @@ class UserUpdateRepository(
     private val localApi: LocalApiService,
     private val cloudApi: CloudApiService,
     private val userInfo: UserDataStore,
-    private val tokenConsumptionRepository: TokenConsumptionRepository
+    private val tokenConsumptionRepository: TokenConsumptionRepositoryContract
 ): UserUpdateRepositoryContract {
 
     /**
@@ -68,7 +69,7 @@ class UserUpdateRepository(
     ): Result<Boolean> {
         return try {
             val userId = getCurrentUserId()
-                ?: return Result.failure(Exception("User not authenticated"))
+                ?: return Result.failure(Exception("No hay ninguna sesión activa"))
 
             val hashedPassword = password?.let { HashUtils.sha512(it) }
             val isCredentialUpdate = email != null || hashedPassword != null
@@ -78,23 +79,10 @@ class UserUpdateRepository(
 
                 if (email != null) {
 
-                    val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.PATCH_USER)
+                    val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudOperation.PATCH_USER)
                     if (tokenResult.isFailure) {
                         return Result.failure(
-                            tokenResult.exceptionOrNull() ?: Exception("Failed to process token balance")
-                        )
-                    }
-
-                    val tokenPatchResponse = localApi.patchUser(
-                        userId  = userId,
-                        request = LocalUserPATCHRequest(tokens = userInfo.userData.first().tokens)
-                    )
-                    if (!tokenPatchResponse.isSuccessful || tokenPatchResponse.body() == null) {
-                        return Result.failure(
-                            Exception(
-                                tokenPatchResponse.body()?.message
-                                    ?: "Unexpected error updating token balance in local database"
-                            )
+                            tokenResult.exceptionOrNull() ?: Exception("No se ha podido verificar el saldo de tokens")
                         )
                     }
 
@@ -103,7 +91,7 @@ class UserUpdateRepository(
                         request = CloudProfilePATCHRequest(email = email)
                     )
                     if (!cloudResponse.isSuccessful) {
-                        return Result.failure(Exception("Failed to update email in cloud service"))
+                        return Result.failure(Exception("No se ha podido actualizar el correo electrónico. Inténtelo de nuevo más tarde"))
                     }
 
                     userInfo.updateProfile(email = email)
@@ -114,33 +102,20 @@ class UserUpdateRepository(
                     request = LocalUserPATCHRequest(
                         email    = email,
                         password = hashedPassword,
-                        tokens   = null
                     )
                 )
                 if (!localResponse.isSuccessful) {
-                    return Result.failure(Exception("Failed to update credentials in local database"))
+                    return Result.failure(Exception("No se han podido actualizar las credenciales. Inténtelo de nuevo más tarde"))
                 }
             }
 
             if (isProfileUpdate) {
 
-                val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.PATCH_USER)
+                val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudOperation.PATCH_USER)
                 if (tokenResult.isFailure) {
                     return Result.failure(
-                        tokenResult.exceptionOrNull() ?: Exception("Failed to process token balance")
-                    )
-                }
-
-                val tokenPatchResponse = localApi.patchUser(
-                    userId  = userId,
-                    request = LocalUserPATCHRequest(tokens = userInfo.userData.first().tokens)
-                )
-                if (!tokenPatchResponse.isSuccessful || tokenPatchResponse.body() == null) {
-                    return Result.failure(
-                        Exception(
-                            tokenPatchResponse.body()?.message
-                                ?: "Unexpected error updating token balance in local database"
-                        )
+                        tokenResult.exceptionOrNull()
+                            ?: Exception("No se ha podido verificar el saldo de tokens")
                     )
                 }
 
@@ -153,7 +128,7 @@ class UserUpdateRepository(
                     )
                 )
                 if (!cloudResponse.isSuccessful) {
-                    return Result.failure(Exception("Failed to update profile in cloud service"))
+                    return Result.failure(Exception("No se ha podido actualizar el perfil. Inténtelo de nuevo más tarde"))
                 }
 
                 userInfo.updateProfile(
@@ -165,7 +140,7 @@ class UserUpdateRepository(
             Result.success(true)
         } catch (e: Exception) {
             e.printStackTrace()
-            Result.failure(e)
+            Result.failure(Exception("Ha ocurrido un error inesperado al actualizar el perfil. Inténtelo de nuevo más tarde"))
         }
     }
 
@@ -192,25 +167,11 @@ class UserUpdateRepository(
     ): Result<Boolean> {
         return try {
             val userId = getCurrentUserId()
-                ?: return Result.failure(Exception("User not authenticated"))
+                ?: return Result.failure(Exception("No hay ninguna sesión activa"))
 
-            val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.PATCH_USER)
+            val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudOperation.PATCH_USER)
             if (tokenResult.isFailure) {
-                return Result.failure(
-                    tokenResult.exceptionOrNull() ?: Exception("Failed to process token balance")
-                )
-            }
-
-            val tokenPatchResponse = localApi.patchUser(
-                userId  = userId,
-                request = LocalUserPATCHRequest(tokens = userInfo.userData.first().tokens)
-            )
-            if (!tokenPatchResponse.isSuccessful || tokenPatchResponse.body() == null) {
-                return Result.failure(
-                    Exception(
-                        tokenPatchResponse.body()?.message
-                            ?: "Unexpected error updating token balance in local database"
-                    )
+                return Result.failure(Exception("No se ha podido verificar el saldo de tokens")
                 )
             }
 
@@ -227,7 +188,7 @@ class UserUpdateRepository(
                 )
             )
             if (!cloudResponse.isSuccessful) {
-                return Result.failure(Exception("Failed to update preferences in cloud service"))
+                return Result.failure(Exception("No se han podido guardar sus preferencias. Inténtelo de nuevo más tarde"))
             }
 
             userInfo.updatePreferences(
@@ -240,7 +201,7 @@ class UserUpdateRepository(
 
             Result.success(true)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("Ha ocurrido un error inesperado al guardar las preferencias. Inténtelo de nuevo más tarde"))
         }
     }
 
@@ -261,25 +222,11 @@ class UserUpdateRepository(
     override suspend fun syncContacts(contacts: List<TrustedContact>): Result<Boolean> {
         return try {
             val userId = getCurrentUserId()
-                ?: return Result.failure(Exception("User not authenticated"))
+                ?: return Result.failure(Exception("No hay ninguna sesión activa"))
 
-            val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.PATCH_USER)
+            val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudOperation.PATCH_USER)
             if (tokenResult.isFailure) {
-                return Result.failure(
-                    tokenResult.exceptionOrNull() ?: Exception("Failed to process token balance")
-                )
-            }
-
-            val tokenPatchResponse = localApi.patchUser(
-                userId  = userId,
-                request = LocalUserPATCHRequest(tokens = userInfo.userData.first().tokens)
-            )
-            if (!tokenPatchResponse.isSuccessful || tokenPatchResponse.body() == null) {
-                return Result.failure(
-                    Exception(
-                        tokenPatchResponse.body()?.message
-                            ?: "Unexpected error updating token balance in local database"
-                    )
+                return Result.failure(Exception("No se ha podido verificar el saldo de tokens")
                 )
             }
 
@@ -297,14 +244,14 @@ class UserUpdateRepository(
                 request = CloudTrustedContactsPATCHRequest(trustedContacts = dtos)
             )
             if (!cloudResponse.isSuccessful) {
-                return Result.failure(Exception("Failed to sync trusted contacts in cloud service"))
+                return Result.failure(Exception("No se han podido guardar los contactos de seguridad. Inténtelo de nuevo más tarde"))
             }
 
             userInfo.updateTrustedContacts(contacts)
 
             Result.success(true)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("Ha ocurrido un error inesperado al guardar los contactos de seguridad. Inténtelo de nuevo más tarde"))
         }
     }
 }

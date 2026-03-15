@@ -8,6 +8,8 @@ import com.posdata.app.data.remote.CloudApiService
 import com.posdata.app.data.remote.LocalApiService
 import com.posdata.app.data.remote.request.LocalLoginPOSTRequest
 import com.posdata.app.data.repository.contract.LoginRepositoryContract
+import com.posdata.app.data.repository.contract.TokenConsumptionRepositoryContract
+import com.posdata.app.model.CloudOperation
 import com.posdata.app.sms.SMSReceiverEnabler
 import com.posdata.app.utils.HashUtils
 
@@ -21,12 +23,14 @@ import com.posdata.app.utils.HashUtils
  * @param localApi Service interface for the local API.
  * @param cloudApi Service interface for the cloud API.
  * @param userInfo Local data source used to persist the user session.
+ * @param tokenConsumptionRepository Repository used to verify and consume tokens.
  */
 class LoginRepository(
     private val context: Context,
     private val localApi: LocalApiService,
     private val cloudApi: CloudApiService,
     private val userInfo: UserDataStore,
+    private val tokenConsumptionRepository: TokenConsumptionRepositoryContract
 ): LoginRepositoryContract {
 
     /**
@@ -34,9 +38,10 @@ class LoginRepository(
      *
      * The operation follows this sequence:
      * 1. Hashes the password and authenticates against the local server.
-     * 2. Fetches the full user profile from the cloud service.
-     * 3. Persists the session in the local DataStore.
-     * 4. Enables the SMS receiver.
+     * 2. Verifies and consumes tokens for the cloud profile fetch.
+     * 3. Fetches the full user profile from the cloud service.
+     * 4. Persists the session in the local DataStore.
+     * 5. Enables the SMS receiver.
      *
      * @param email Email address of the user.
      * @param password Plain-text password of the user.
@@ -50,11 +55,17 @@ class LoginRepository(
             val localData = localResp.body()
 
             if (!localResp.isSuccessful || localData == null || !localData.success) {
-                return Result.failure(Exception(localData?.message ?: "Invalid credentials"))
+                return Result.failure(Exception("El correo o la contraseña no son correctos"))
             }
 
             val userId = localData.userId
-            val tokens = localData.tokens
+
+            val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudOperation.GET_USER, userId)
+            if (tokenResult.isFailure) {
+                return Result.failure(
+                    tokenResult.exceptionOrNull() ?: Exception("No se ha podido verificar el saldo de tokens")
+                )
+            }
 
             val cloudData = try {
                 val cloudResp = cloudApi.getUser(userId)
@@ -62,7 +73,7 @@ class LoginRepository(
             } catch (_: Exception) {
                 return Result.failure(
                     Exception(
-                        "Unexpected error trying to retreive user details from the cloud service.")
+                        "No se han podido cargar sus datos. Inténtelo de nuevo más tarde")
                 )
             }
 
@@ -76,7 +87,6 @@ class LoginRepository(
 
             userInfo.saveUserSession(
                 userId = userId,
-                tokens = tokens,
                 fullName = fullName,
                 contact = contact,
                 preferences = preferences,
@@ -85,10 +95,10 @@ class LoginRepository(
 
             SMSReceiverEnabler.enableReceiver(context)
 
-            Result.success("Login successful")
+            Result.success("Inicio de sesión exitoso")
         } catch (e: Exception) {
             e.printStackTrace()
-            Result.failure(e)
+            Result.failure(Exception("Ha ocurrido un error inesperado. Inténtelo de nuevo más tarde"))
         }
     }
 }

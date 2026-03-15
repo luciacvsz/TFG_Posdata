@@ -154,11 +154,11 @@ class ProfileViewModelFactory(private val context: Context) : ViewModelProvider.
             val userInfo = UserDataStore(context)
             val localApi = RetrofitClient.localInstance
             val cloudApi = RetrofitClient.cloudInstance
-            val tokenConsumptionRepository = TokenConsumptionRepository(userInfo)
+            val tokenConsumptionRepository = TokenConsumptionRepository(userInfo, localApi)
 
             val userUpdateRepository = UserUpdateRepository(localApi, cloudApi, userInfo, tokenConsumptionRepository)
             val logoutRepository = LogoutRepository(context, userInfo)
-            val deleteAccountRepository = DeleteAccountRepository(localApi, cloudApi, userInfo, tokenConsumptionRepository)
+            val deleteAccountRepository = DeleteAccountRepository(context, localApi, cloudApi, userInfo, tokenConsumptionRepository)
 
             @Suppress("UNCHECKED_CAST")
             return ProfileViewModel(userUpdateRepository, logoutRepository, deleteAccountRepository) as T

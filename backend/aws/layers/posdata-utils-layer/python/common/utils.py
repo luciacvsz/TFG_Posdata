@@ -44,30 +44,3 @@ def extract_body(event: dict) -> dict:
     if not body:
         raise ValueError("Request body is required.")
     return body
-
-def extract_query_param(event: dict, param: str) -> str:
-    '''
-    Extract and validate a query string parameter from a Lambda event.
-
-    Parameters
-    ----------
-    event : dict
-        The Lambda event dictionary containing the query string parameters.
-    param : str
-        The name of the query string parameter to extract.
-
-    Returns
-    -------
-    str
-        The value of the requested query string parameter.
-
-    Raises
-    ------
-    ValueError
-        If the query string parameter is missing or empty.
-    '''
-    query_params = event.get('queryStringParameters', {})
-    value = query_params.get(param) if query_params else None
-    if not value:
-        raise ValueError(f"Missing required query parameter: {param}")
-    return value

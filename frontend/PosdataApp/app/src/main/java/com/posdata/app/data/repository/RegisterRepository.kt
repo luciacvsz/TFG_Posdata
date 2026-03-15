@@ -6,7 +6,7 @@ import com.posdata.app.model.AppPreferences
 import com.posdata.app.model.Contact
 import com.posdata.app.data.remote.CloudApiService
 import com.posdata.app.data.remote.LocalApiService
-import com.posdata.app.data.remote.request.LocalUserPOSTRequest
+import com.posdata.app.data.remote.request.LocalUserPUTRequest
 import com.posdata.app.data.remote.request.CloudUsersPOSTRequest
 import com.posdata.app.data.repository.contract.RegisterRepositoryContract
 import com.posdata.app.sms.SMSReceiverEnabler
@@ -63,11 +63,11 @@ class RegisterRepository(
 
             if (!localCheckResponse.isSuccessful || localCheckData == null) {
                 return Result.failure(
-                    Exception(localCheckData?.message ?: "Failed to access local database")
+                    Exception("No se ha podido verificar el correo. Inténtelo de nuevo más tarde")
                 )
             } else if (localCheckData.success) {
                 return Result.failure(
-                    Exception(localCheckData.message.ifBlank { "An account with this email already exists" })
+                    Exception("Ya existe una cuenta con este correo electrónico")
                 )
             }
 
@@ -75,7 +75,7 @@ class RegisterRepository(
             val cloudData = cloudResponse.body()
 
             if (!cloudResponse.isSuccessful || cloudData == null) {
-                return Result.failure(Exception("Failed to register user in cloud service"))
+                return Result.failure(Exception("No se ha podido completar el registro. Inténtelo de nuevo más tarde"))
             }
 
             val userId = cloudData.userId
@@ -85,20 +85,17 @@ class RegisterRepository(
                 email = email
             )
 
-            val localCreateResponse = localApi.postUser(userId, LocalUserPOSTRequest(email, hashedPassword))
+            val localCreateResponse = localApi.putUser(userId, LocalUserPUTRequest(email, hashedPassword))
             val localCreateData = localCreateResponse.body()
 
             if (!localCreateResponse.isSuccessful || localCreateData == null || !localCreateData.success) {
                 return Result.failure(
-                    Exception(localCreateData?.message ?: "Failed to create user in local database")
+                    Exception("No se ha podido completar el registro. Inténtelo de nuevo más tarde")
                 )
             }
 
-            val tokens = localCreateData.tokens
-
             userInfo.saveUserSession (
                 userId = userId,
-                tokens = tokens,
                 fullName = fullName,
                 contact = contact,
                 preferences = AppPreferences(),
@@ -107,11 +104,11 @@ class RegisterRepository(
 
             SMSReceiverEnabler.enableReceiver(context)
 
-            Result.success("Registration successful")
+            Result.success("Registro completado con éxito")
 
         } catch (e: Exception) {
             e.printStackTrace()
-            Result.failure(e)
+            Result.failure(Exception("Ha ocurrido un error inesperado durante el registro. Inténtelo de nuevo más tarde"))
         }
     }
 }

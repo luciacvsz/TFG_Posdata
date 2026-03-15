@@ -98,6 +98,31 @@ fun HomeContent(
                 }
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Posdata support button — opens the email client with Posdata's address pre-filled
+            OutlinedButton(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = "mailto:posdata.alertas@gmail.com".toUri()
+                    }
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Contactar con Posdata",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        "posdata.alertas@gmail.com",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(60.dp))
         }
     }

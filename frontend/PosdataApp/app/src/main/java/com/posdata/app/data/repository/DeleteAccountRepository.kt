@@ -1,28 +1,34 @@
 package com.posdata.app.data.repository
 
+import android.content.Context
 import com.posdata.app.data.local.UserDataStore
 import com.posdata.app.data.remote.CloudApiService
 import com.posdata.app.data.remote.LocalApiService
 import com.posdata.app.data.repository.contract.DeleteAccountRepositoryContract
+import com.posdata.app.data.repository.contract.TokenConsumptionRepositoryContract
+import com.posdata.app.model.CloudOperation
+import com.posdata.app.sms.SMSReceiverEnabler
 import kotlinx.coroutines.flow.first
 
 /**
  * Repository responsible for handling the full account deletion flow.
  *
  * Coordinates the deletion across both the local and cloud services,
- * verifies token availability before proceeding, and clears the local
- * session upon success.
+ * verifies token availability before proceeding, clears the local
+ * session and disables the SMS receiver upon success.
  *
+ * @param context Application context required to disable the SMS receiver.
  * @param localApi Service interface for the local API.
  * @param cloudApi Service interface for the cloud API.
  * @param userInfo Local data source used to read session data and clear it on success.
  * @param tokenConsumptionRepository Repository used to verify and consume tokens.
  */
 class DeleteAccountRepository(
+    private val context: Context,
     private val localApi: LocalApiService,
     private val cloudApi: CloudApiService,
     private val userInfo: UserDataStore,
-    private val tokenConsumptionRepository: TokenConsumptionRepository
+    private val tokenConsumptionRepository: TokenConsumptionRepositoryContract
 ): DeleteAccountRepositoryContract {
 
     /**
@@ -51,31 +57,31 @@ class DeleteAccountRepository(
     override suspend fun performDeleteAccount(): Result<String> {
         return try {
             val userId = getCurrentUserId()
-                ?: return Result.failure(Exception("User not authenticated"))
+                ?: return Result.failure(Exception("No hay ninguna sesión activa"))
 
-            val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudCosts.DELETE_USER)
+            val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudOperation.DELETE_USER)
             if (tokenResult.isFailure) {
-                return Result.failure(
-                    tokenResult.exceptionOrNull() ?: Exception("Failed to process token balance")
+                return Result.failure(Exception("No se ha podido verificar el saldo de tokens")
                 )
             }
 
             val cloudResponse = cloudApi.deleteUser(userId)
             if (!cloudResponse.isSuccessful) {
-                return Result.failure(Exception("Failed to delete user from cloud service"))
+                return Result.failure(Exception("No se ha podido eliminar su cuenta. Inténtelo de nuevo más tarde"))
             }
 
             val localResponse = localApi.deleteUser(userId)
             if (!localResponse.isSuccessful) {
-                return Result.failure(Exception("Failed to delete user from local database"))
+                return Result.failure(Exception("No se ha podido completar la eliminación de su cuenta. Inténtelo de nuevo más tarde"))
             }
 
             userInfo.clearSession()
+            SMSReceiverEnabler.disableReceiver(context)
 
-            Result.success("Account deleted successfully")
+            Result.success("Cuenta eliminada con éxito")
         } catch (e: Exception) {
             e.printStackTrace()
-            Result.failure(e)
+            Result.failure(Exception("Ha ocurrido un error inesperado. Inténtelo de nuevo más tarde"))
         }
     }
 }

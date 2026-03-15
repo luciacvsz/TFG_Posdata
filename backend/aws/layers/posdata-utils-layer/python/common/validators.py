@@ -2,10 +2,7 @@ import re
 
 _EMAIL_PATTERN = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 _PHONE_PATTERN = re.compile(r'^(\+?[1-9]\d{1,14}|[0-9]{9,15})$')
-_HTTP = r"https?://[^\s]+" # Simplified URL pattern for http and https
-_WWW = r"www\.[^\s]+" # Simplified URL pattern for www
-_DOMAIN = r"((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?)" # Simplified domain pattern with optional path
-_URL_REGEX = re.compile(f"({_HTTP})|({_WWW})|({_DOMAIN})") # Combined regex to match URLs in different formats
+
 
 def is_valid_email(email: str) -> bool:
     '''
@@ -42,6 +39,11 @@ def is_valid_phone(phone: str) -> bool:
     if not isinstance(phone, str):
         return False
     return bool(_PHONE_PATTERN.match(phone))
+
+_HTTP = r"https?://[^\s]+" # Simplified URL pattern for http and https
+_WWW = r"www\.[^\s]+" # Simplified URL pattern for www
+_DOMAIN = r"((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?)" # Simplified domain pattern with optional path
+_URL_REGEX = re.compile(f"({_HTTP})|({_WWW})|({_DOMAIN})") # Combined regex to match URLs in different formats
 
 def extract_urls(message: str) -> list:
     '''

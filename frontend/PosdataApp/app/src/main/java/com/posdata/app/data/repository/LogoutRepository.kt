@@ -33,10 +33,10 @@ class LogoutRepository(
         return try {
             userInfo.clearSession()
             SMSReceiverEnabler.disableReceiver(context)
-            Result.success("Logout successful")
+            Result.success("Cierre de sesión completado con éxito")
         } catch (e: Exception) {
             e.printStackTrace()
-            Result.failure(e)
+            Result.failure(Exception("Ha ocurrido un error inesperado al cerrar sesión"))
         }
     }
 }

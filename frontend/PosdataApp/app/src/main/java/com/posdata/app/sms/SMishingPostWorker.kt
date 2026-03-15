@@ -11,9 +11,8 @@ import androidx.work.workDataOf
 import com.posdata.app.data.local.UserDataStore
 import com.posdata.app.data.remote.RetrofitClient
 import com.posdata.app.data.remote.request.CloudSMSPOSTRequest
-import com.posdata.app.data.remote.request.LocalUserPATCHRequest
-import com.posdata.app.data.repository.CloudCosts
 import com.posdata.app.data.repository.TokenConsumptionRepository
+import com.posdata.app.model.CloudOperation
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
@@ -37,10 +36,9 @@ class SMishingPostWorker(
     context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
-    private val localApi = RetrofitClient.localInstance
     private val cloudApi = RetrofitClient.cloudInstance
     private val userInfo = UserDataStore(applicationContext)
-    private val tokenConsumptionRepository = TokenConsumptionRepository(userInfo)
+    private val tokenConsumptionRepository = TokenConsumptionRepository(userInfo, RetrofitClient.localInstance)
 
     /**
      * Executes the SMS submission flow.
@@ -66,19 +64,12 @@ class SMishingPostWorker(
         if (!userData.isLoggedIn) return Result.failure()
 
         val tokenResult =
-            tokenConsumptionRepository.haveEnoughTokens(CloudCosts.POST_SMS)
+            tokenConsumptionRepository.haveEnoughTokens(CloudOperation.POST_SMS)
 
         if (tokenResult.isFailure) {
             return Result.failure()
         }
 
-        val tokenPatchResponse = localApi.patchUser(
-            userId  = userData.userId,
-            request = LocalUserPATCHRequest(tokens = userInfo.userData.first().tokens)
-        )
-        if (!tokenPatchResponse.isSuccessful || tokenPatchResponse.body() == null) {
-            return Result.failure()
-        }
         val postResponse = cloudApi.postSMS(
             userId = userData.userId,
             request = CloudSMSPOSTRequest(sender, message)
@@ -130,7 +121,7 @@ class SMishingPostWorker(
                 .setInputData(data)
                 .setBackoffCriteria(
                     BackoffPolicy.EXPONENTIAL,
-                    10_000,
+                    3_000,
                     TimeUnit.MILLISECONDS
                 )
                 .build()

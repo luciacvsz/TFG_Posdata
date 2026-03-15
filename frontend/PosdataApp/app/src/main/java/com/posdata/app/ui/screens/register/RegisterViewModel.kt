@@ -1,15 +1,16 @@
 package com.posdata.app.ui.screens.register
 
 import android.content.Context
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.posdata.app.data.local.UserDataStore
 import com.posdata.app.data.remote.RetrofitClient
 import com.posdata.app.data.repository.RegisterRepository
+import com.posdata.app.ui.screens.login.LoginState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -29,7 +30,7 @@ data class RegisterState(
  * ViewModel for the registration screen.
  *
  * Manages the [RegisterState] and delegates the registration operation to [RegisterRepository].
- * Exposes [state] as a Compose-observable property so the UI recomposes
+ * Exposes [uiState] as a [StateFlow] so the UI can collect it and recompose
  * automatically on every state change.
  *
  * @param repository Repository responsible for the full registration flow.
@@ -37,14 +38,15 @@ data class RegisterState(
 class RegisterViewModel(
     private val repository: RegisterRepository
 ) : ViewModel() {
-    var state by mutableStateOf(RegisterState())
-        private set
+
+    private val _uiState = MutableStateFlow(RegisterState())
+    val uiState: StateFlow<RegisterState> = _uiState.asStateFlow()
 
     /**
      * Initiates the registration flow with the given user details.
      *
      * Validates that no field is blank before proceeding.
-     * Updates [state] to reflect the loading, success, or failure outcome.
+     * Updates [uiState] to reflect the loading, success, or failure outcome.
      *
      * @param fullName Full name entered by the user.
      * @param phoneNumber Phone number entered by the user.
@@ -53,19 +55,19 @@ class RegisterViewModel(
      */
     fun register(fullName: String, phoneNumber: String, email: String, password: String) {
         if(fullName.isBlank() || email.isBlank() || phoneNumber.isBlank() || password.isBlank()) {
-            state = state.copy(errorMessage = "Por favor, rellene todos los campos")
+            _uiState.value = _uiState.value.copy(errorMessage = "Por favor, rellene todos los campos")
             return
         }
 
         viewModelScope.launch {
-            state = state.copy(isRegistering = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(isRegistering = true, errorMessage = null)
 
             val result = repository.performRegistration(fullName, phoneNumber, email, password)
 
-            state = result.fold(
-                onSuccess = { state.copy(isRegistering = false, isSuccess = true) },
+            _uiState.value = result.fold(
+                onSuccess = { _uiState.value.copy(isRegistering = false, isSuccess = true) },
                 onFailure = { error ->
-                    state.copy(
+                    _uiState.value.copy(
                         isRegistering = false,
                         errorMessage = error.message
                     )
@@ -78,7 +80,7 @@ class RegisterViewModel(
      * Clears the current error message, dismissing the error dialog.
      */
     fun dismissError() {
-        state = state.copy(errorMessage = null)
+        _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 }
 
