@@ -48,7 +48,7 @@ def store_hash(message_hash: str, reason: str) -> bool:
             Item={
                 'PK': PARTITION_KEY,
                 'SK': message_hash,
-                'DESCRIPTION': f'Learned: {reason}',
+                'DESCRIPTION': f'{reason}',
                 'UPLOAD_DATE': datetime.now(timezone.utc).isoformat()
             }
         )
@@ -76,7 +76,7 @@ def process_message(payload: dict) -> bool:
         logger.warning(f"Invalid empty message received: {message}")
         return False
     
-    reason = str(payload.get('reason', 'No reason provided')).strip()
+    reason = str(payload.get('reason', 'Desconocida')).strip()
     message_hash = get_sha512_hash(message.strip())
 
     return store_hash(message_hash, reason)

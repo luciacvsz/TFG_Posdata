@@ -134,14 +134,14 @@ def _send_email_notifications(emails: list, email_content: dict, user_id: str) -
             logger.error(f"Failed to send email to {email}: {e}")
 
 
-def notify_trusted_contacts(info: dict, user_id: str) -> None:
+def notify_trusted_contacts(verdict: str, user_id: str) -> None:
     '''
     Notifies the trusted contacts of a user via SMS and email.
 
     Parameters
     ----------
-    info : dict
-        The notification information containing the verdict.
+    verdict : str
+        The verdict indicating the status of the message.
     user_id : str
         The user ID whose trusted contacts will be notified.
 
@@ -156,7 +156,6 @@ def notify_trusted_contacts(info: dict, user_id: str) -> None:
         return
 
     full_name = user_info.get('FULL_NAME', 'User')
-    verdict = info.get('verdict')
     trusted_contacts = user_info.get('TRUSTED_CONTACTS', [])
 
     phone_numbers = [c['phone_number'] for c in trusted_contacts if c.get('phone_number') != "NONE"]
@@ -199,7 +198,7 @@ def lambda_handler(event, context):
 
         path = store_notification_in_s3(event, user_id, execution_id)
         if verdict in [Verdict.SUSPICIOUS.value, Verdict.MALICIOUS.value]:
-            notify_trusted_contacts(event, user_id)
+            notify_trusted_contacts(verdict, user_id)
 
         return {
             "status": "success",

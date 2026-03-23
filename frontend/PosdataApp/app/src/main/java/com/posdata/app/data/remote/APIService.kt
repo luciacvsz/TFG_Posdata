@@ -149,7 +149,7 @@ interface CloudApiService {
      * @param userId Unique identifier of the user to update.
      * @param request Profile fields to update.
      */
-    @PATCH("users/profile/{user_id}")
+    @PATCH("users/{user_id}/profile")
     suspend fun patchProfile(@Path("user_id") userId: String, @Body request: CloudProfilePATCHRequest): Response<Unit>
 
     /**
@@ -158,7 +158,7 @@ interface CloudApiService {
      * @param userId Unique identifier of the user to update.
      * @param request New list of trusted contacts.
      */
-    @PATCH("users/trusted-contacts/{user_id}")
+    @PATCH("users/{user_id}/trusted-contacts")
     suspend fun patchTrustedContacts(@Path("user_id") userId: String, @Body request: CloudTrustedContactsPATCHRequest): Response<Unit>
 
     /**
@@ -169,7 +169,7 @@ interface CloudApiService {
      * @param userId Unique identifier of the user to update.
      * @param request Preference fields to update.
      */
-    @PATCH("users/preferences/{user_id}")
+    @PATCH("users/{user_id}/preferences")
     suspend fun patchPreferences(@Path("user_id") userId: String, @Body request: CloudPreferencesPATCHRequest): Response<Unit>
 
     /**

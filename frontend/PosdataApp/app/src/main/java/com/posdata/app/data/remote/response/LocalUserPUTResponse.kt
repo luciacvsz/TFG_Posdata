@@ -7,10 +7,8 @@ import com.google.gson.annotations.SerializedName
  *
  * @param success Whether the user was successfully created.
  * @param message Human-readable description of the result.
- * @param tokens Initial token balance assigned to the newly created user.
  */
 data class LocalUserPUTResponse(
     @SerializedName("success") val success: Boolean,
     @SerializedName("message") val message: String,
-    @SerializedName("tokens") val tokens: Int
 )

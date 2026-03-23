@@ -48,8 +48,8 @@ def hash_check(message: str) -> dict | None:
     if hash_data := get_item_by_pk_sk(table, 'BLACKLIST_HASH', message_hash):
         return {
             "verdict": Verdict.MALICIOUS.value,
-            "reason": "Message hash is blacklisted",
-            "details": hash_data.get('DESCRIPTION', '')
+            "reason": "Este mensaje ya ha sido identificado como peligroso",
+            "details": f"Este mensaje ha sido marcado como fraudulento. Fuente: {hash_data.get('DESCRIPTION', 'desconocida')}"
         }
     return None
 
@@ -76,8 +76,8 @@ def url_check(urls: list, message: str) -> dict | None:
             trigger_hash_learning_async(message, f"Blocked by blacklisted URL: {url}")
             return {
                 "verdict": Verdict.MALICIOUS.value,
-                "reason": "Message contains blacklisted URL",
-                "details": f"Blacklisted URL found: {url}"
+                "reason": "El mensaje contiene un enlace peligroso",
+                "details": f"Enlace peligroso detectado: {url}"
             }
         
         if get_item_by_pk_sk(table, 'WHITELIST_URL', url):
@@ -86,7 +86,8 @@ def url_check(urls: list, message: str) -> dict | None:
     if whitelisted_count == len(urls) and len(urls) > 0:
         return {
             "verdict": Verdict.SAFE.value,
-            "reason": "All URLs are whitelisted"
+            "reason": "Todos los enlaces del mensaje son seguros",
+            "details": "No se encontraron enlaces peligrosos"
         }
     
     return None
@@ -131,8 +132,8 @@ def sender_check(sender: str) -> dict | None:
     if sender_data := get_item_by_pk_sk(table, 'WHITELIST_SENDER', sender):
         return {
             "verdict": Verdict.SAFE.value,
-            "reason": "Sender is whitelisted",
-            "details": sender_data.get('DESCRIPTION', '')
+            "reason": "El remitente es de confianza",
+            "details": f"Este remitente ha sido verificado como seguro. Fuente: {sender_data.get('DESCRIPTION', 'desconocida')}"
         }
     
     return None
@@ -174,7 +175,7 @@ def lambda_handler(event, context):
             "sender": sender,
             "message": message,
             "verdict": Verdict.UNKNOWN.value,
-            "reason": "Not found in any list",
+            "reason": "No se ha podido determinar si el mensaje es seguro",
         }
         
         if hash_result := hash_check(message):

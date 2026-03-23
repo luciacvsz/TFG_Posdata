@@ -8,11 +8,9 @@ import com.google.gson.annotations.SerializedName
  * @param success Whether the authentication was successful.
  * @param message Human-readable description of the result.
  * @param userId Unique identifier of the authenticated user.
- * @param tokens Current token balance of the user.
  */
 data class LocalLoginPOSTResponse(
     @SerializedName("success") val success: Boolean,
     @SerializedName("message") val message: String,
     @SerializedName("user_id") val userId: String,
-    @SerializedName("tokens") val tokens: Int
 )

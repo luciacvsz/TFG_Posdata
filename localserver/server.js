@@ -266,7 +266,6 @@ app.post("/login", (req, res) => {
       success: true,
       message: "Correct login",
       user_id: results[0].user_id,
-      tokens: results[0].tokens || 0,
     });
   });
 });
@@ -293,7 +292,6 @@ app.put("/users/:user_id", async (req, res) => {
         res.json({
           success: true,
           message: "Registration successful",
-          tokens: INITIAL_TOKENS,
         });
       },
     );
