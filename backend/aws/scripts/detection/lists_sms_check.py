@@ -1,11 +1,9 @@
 import boto3
-import json
 import logging
 import os
-from botocore.exceptions import ClientError
 from common.database import get_item_by_pk_sk
 from common.notification import Verdict
-from common.security import get_sha512_hash
+from common.security import get_sha512_hash, trigger_hash_learning_async
 from common.validators import extract_urls
 
 # Setup logging
@@ -73,7 +71,7 @@ def url_check(urls: list, message: str) -> dict | None:
     whitelisted_count = 0
     for url in urls:
         if get_item_by_pk_sk(table, 'BLACKLIST_URL', url):
-            trigger_hash_learning_async(message, f"Blocked by blacklisted URL: {url}")
+            trigger_hash_learning_async(sqs, HASHING_QUEUE_URL, message, f"Blocked by blacklisted URL: {url}")
             return {
                 "verdict": Verdict.MALICIOUS.value,
                 "reason": "El mensaje contiene un enlace peligroso",
@@ -91,26 +89,6 @@ def url_check(urls: list, message: str) -> dict | None:
         }
     
     return None
-
-def trigger_hash_learning_async(message: str, reason: str) -> None:
-    '''
-    Trigger the asynchronous learning of a message hash by sending a message to the SQS queue.
-
-    Parameters
-    ----------
-    message : str
-        The SMS message content.
-    reason : str
-        The reason for learning the hash.
-    '''
-    payload = {'message': message, 'reason': reason}
-    try:
-        sqs.send_message(
-            QueueUrl=HASHING_QUEUE_URL,
-            MessageBody=json.dumps(payload)
-        )
-    except ClientError as ce:
-        logger.error(f"Failed to send message to SQS for hash learning: {ce}")
 
 def sender_check(sender: str) -> dict | None:
     '''

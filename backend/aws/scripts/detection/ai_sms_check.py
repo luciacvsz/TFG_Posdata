@@ -11,44 +11,50 @@ import joblib
 import logging
 import numpy as np
 import onnxruntime as ort
-import re
 from common.notification import Verdict
+from common.security import trigger_hash_learning_async
+from common.smishing import urgency_words, action_words, financial_words, prize_words, threat_words, url_pattern, shortener_pattern, phone_pattern
 from tokenizers import Tokenizer
 
+# Setup logging
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-for var in ['MODEL_BUCKET_NAME']:
+# Environment variables
+for var in ['MODEL_BUCKET_NAME', 'HASHING_QUEUE_URL']:
     if not os.environ.get(var):
         raise RuntimeError(f"Missing required environment variable: {var}")
 
 MODEL_BUCKET_NAME = os.environ.get('MODEL_BUCKET_NAME')
+HASHING_QUEUE_URL = os.environ.get('HASHING_QUEUE_URL')
 REGION_NAME = os.environ.get('REGION_NAME', 'eu-west-3')
+
+# Constants
 LOCAL_PATH = '/tmp/models'
 
-urgency_words = ['urgente','urgently','urgent','inmediatamente','immediately','ahora','now','hoy','today','bloquea','blocked','suspendida','suspended','cancel','cancela','verifique','verify']
-action_words = ['haga clic','click','acceda','access','llame','call','responda','reply','confirme','confirm','descargue','download','ingrese','enter']
-financial_words = ['cuenta','account','banco','bank','tarjeta','card','pago','payment','transferencia','transfer','bizum','credito','credit','débito','debit']
-prize_words = ['gratis','free','premio','prize','ganador','winner','regalo','gift','oferta','offer','descuento','discount','gana','win']
-threat_words = ['amenaza','threat','peligro','danger','dangerous','peligroso','cuidado','beware','attention','atencion','careful']
-impersonation_words = ["santander","bbva","caixabank","bankinter","sabadell","bankia","ing","kutxabank","ibercaja","unicaja","abanca","cajamar","openbank","bizum","movistar","vodafone","orange","masmovil","yoigo","jazztel","lowi","correos","seur","mrw","dhl","fedex","ups","gls","celeritas","hacienda","tributaria","dgt","sepe","ministerio","ayuntamiento","policia","guardia civil","seguridad social","apple","google","microsoft","netflix","spotify","whatsapp","facebook","instagram","icloud","mercadona","lidl","carrefour","alcampo","aldi","zara","inditex","repsol","bp","iberdrola","endesa","naturgy"]
-
-url_pattern = re.compile(r"(https?://[^\\s]+)|(www\\.[^\\s]+)")
-shortener_pattern = re.compile(r'\\b(bit\\.ly|t\\.co|tinyurl\\.com|goo\\.gl|ow\\.ly|rb\\.gy|cutt\\.ly)\\b')
-phone_pattern = re.compile(r'(\\+?[1-9]\\d{1,14}|[0-9]{9,15})')
-
+# Initialize resources
 s3 = boto3.client('s3', region_name=REGION_NAME)
+sqs = boto3.client('sqs', region_name=REGION_NAME)
 lgbm_model = None
 ort_session = None
 distilbert_tokenizer = None
 meta_model = None
 
-def download_model_files():
+def download_model_files() -> None:
+    '''
+    Downloads the model files from the specified S3 bucket to the local path.
+
+    Raises
+    ------
+    Exception
+        If there is an error during download.
+    '''
     files = {
         'lgbm_v1': ['model.pkl', 'config.json'],
         'distilbert_v1': ['model.onnx', 'model.onnx.data', 'tokenizer.json'],
         'meta_v1': ['model.pkl', 'config.json'],
     }
+
     for folder, filenames in files.items():
         local_folder = os.path.join(LOCAL_PATH, folder)
         os.makedirs(local_folder, exist_ok=True)
@@ -64,10 +70,21 @@ def download_model_files():
                     raise
 
 def init_inference_engine() -> None:
+    '''
+    Initializes the LightGBM, DistilBERT ONNX and meta-model inference engines.
+    Downloads the model files from S3 if not already present.
+
+    Raises
+    ------
+    Exception
+        If there is an error during initialization.
+    '''
     global lgbm_model, ort_session, distilbert_tokenizer, meta_model
     if lgbm_model is not None and ort_session is not None: 
         return
+    
     download_model_files()
+
     logger.info("Loading LightGBM...")
     try:
         lgbm_model = joblib.load(os.path.join(LOCAL_PATH, 'lgbm_v1', 'model.pkl'))
@@ -75,6 +92,7 @@ def init_inference_engine() -> None:
     except Exception as e:
         logger.error(f"LightGBM load error: {e}", exc_info=True)
         raise
+
     logger.info("Loading DistilBERT ONNX session...")
     sess_options = ort.SessionOptions()
     sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
@@ -86,6 +104,7 @@ def init_inference_engine() -> None:
     distilbert_tokenizer = Tokenizer.from_file(
         os.path.join(LOCAL_PATH, 'distilbert_v1', 'tokenizer.json')
     )
+
     logger.info("Loading meta-model...")
     try:
         meta_model = joblib.load(os.path.join(LOCAL_PATH, 'meta_v1', 'model.pkl'))
@@ -93,7 +112,8 @@ def init_inference_engine() -> None:
     except Exception as e:
         logger.error(f"Meta-model load error: {e}", exc_info=True)
         raise
-        logger.info("Inference engine ready.")
+
+    logger.info("Inference engine ready.")
 
 try:
     init_inference_engine()
@@ -104,7 +124,20 @@ except Exception:
     distilbert_tokenizer = None
     meta_model = None
 
-def extract_features(text):
+def extract_features(text: str) -> dict:
+    '''
+    Extracts structural and semantic features from the given SMS text.
+
+    Parameters
+    ----------
+    text : str
+        The SMS message content.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the extracted features.
+    '''
     t = text.lower()
     url_match = url_pattern.search(text)
     features = {
@@ -121,7 +154,6 @@ def extract_features(text):
         'has_financial': int(any(w in t for w in financial_words)),
         'has_prize': int(any(w in t for w in prize_words)),
         'has_threat': int(any(w in t for w in threat_words)),
-        'has_impersonation': int(any(w in t for w in impersonation_words)),
         'has_url': int(bool(url_match)),
         'has_phone': int(bool(phone_pattern.search(text))),
         'url_len': len(url_match.group(0)) if url_match else 0,
@@ -129,7 +161,20 @@ def extract_features(text):
     }
     return features
 
-def predict_distilbert(text):
+def predict_distilbert(text: str) -> float:
+    '''
+    Runs inference on the given text using the DistilBERT ONNX model.
+
+    Parameters
+    ----------
+    text : str
+        The SMS message content.
+
+    Returns
+    -------
+    float
+        The probability of the message being smishing.
+    '''
     encoding = distilbert_tokenizer.encode(text)
     input_ids = encoding.ids[:128] + [0] * max(0, 128 - len(encoding.ids))
     attention_mask = encoding.attention_mask[:128] + [0] * max(0, 128 - len(encoding.attention_mask))
@@ -142,9 +187,24 @@ def predict_distilbert(text):
     probs = e_x / e_x.sum()
     return float(probs[1])
 
-def build_explanation(features_dict, spam_prob):
+def build_explanation(features_dict: dict, spam_prob: float) -> tuple[str, str]:
+    '''
+    Builds a human-readable explanation of the verdict based on the detected signals.
+
+    Parameters
+    ----------
+    features_dict : dict
+        The extracted features from the SMS message.
+    spam_prob : float
+        The probability of the message being smishing.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the reason and details of the verdict.
+    '''
     signals = []
-    if features_dict['has_impersonation']: signals.append("suplantación de entidad")
+
     if features_dict['has_urgency']: signals.append("lenguaje urgente")
     if features_dict['has_action']: signals.append("acción requerida")
     if features_dict['has_url']: signals.append("URL sospechosa")
@@ -165,7 +225,27 @@ def build_explanation(features_dict, spam_prob):
 
     return reason, details
 
-def lambda_handler(event, context):
+def lambda_handler(event: dict, context: object) -> dict:
+    '''
+    Lambda function to perform AI-based SMS content checking.
+
+    Parameters
+    ----------
+    event : dict
+        The event data containing SMS details.
+    context : object
+        The runtime information of the Lambda function.
+
+    Returns
+    -------
+    dict
+        The result of the SMS check with verdict and reason.
+
+    Raises
+    ------
+    Exception
+        If there is an error during inference.
+    '''
     try:
         init_inference_engine()
         text    = event.get('message')
@@ -180,20 +260,24 @@ def lambda_handler(event, context):
         }
         if not text:
             return response
+        
         features = extract_features(text)
         score_lgbm = lgbm_model.predict_proba([list(features.values())])[0][1]
         score_distilbert = predict_distilbert(text)
+
         X_meta = np.array([[score_lgbm, score_distilbert]])
         spam_prob = float(meta_model.predict_proba(X_meta)[0][1])
-        reason, details = build_explanation(features, spam_prob)
+
+        response['reason'], response['details'] = build_explanation(features, spam_prob)
+
         if spam_prob > 0.8:
             response['verdict'] = Verdict.MALICIOUS.value
+            trigger_hash_learning_async(sqs, HASHING_QUEUE_URL, text, "Detected as spam")
         elif spam_prob > 0.5:
             response['verdict'] = Verdict.SUSPICIOUS.value
         else:
             response['verdict'] = Verdict.SAFE.value
-        response['reason']  = reason
-        response['details'] = details
+
         logger.info(f"AI SMS check for user {user_id}: {response['verdict']} ({spam_prob*100:.2f}%)")
         return response
     except Exception as e:
