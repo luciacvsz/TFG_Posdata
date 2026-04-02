@@ -19,7 +19,7 @@ def get_sha512_hash(text: str) -> str:
     sha512_hash = hashlib.sha512(text.encode('utf-8')).hexdigest()
     return sha512_hash
 
-def trigger_hash_learning_async(sqs: Object, hashing_queue_url:str, message: str, reason: str) -> None:
+def trigger_hash_learning_async(sqs: object, hashing_queue_url:str, message: str, reason: str) -> None:
     '''
     Trigger the asynchronous learning of a message hash by sending a message to the SQS queue.
 

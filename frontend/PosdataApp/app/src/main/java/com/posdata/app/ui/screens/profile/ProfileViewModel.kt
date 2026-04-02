@@ -157,8 +157,8 @@ class ProfileViewModelFactory(private val context: Context) : ViewModelProvider.
             val tokenConsumptionRepository = TokenConsumptionRepository(userInfo, localApi)
 
             val userUpdateRepository = UserUpdateRepository(localApi, cloudApi, userInfo, tokenConsumptionRepository)
-            val logoutRepository = LogoutRepository(context, userInfo)
-            val deleteAccountRepository = DeleteAccountRepository(context, localApi, cloudApi, userInfo, tokenConsumptionRepository)
+            val logoutRepository = LogoutRepository(userInfo)
+            val deleteAccountRepository = DeleteAccountRepository(localApi, cloudApi, userInfo, tokenConsumptionRepository)
 
             @Suppress("UNCHECKED_CAST")
             return ProfileViewModel(userUpdateRepository, logoutRepository, deleteAccountRepository) as T

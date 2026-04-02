@@ -29,13 +29,13 @@ import kotlinx.coroutines.flow.first
  *
  * ## Analysis flow
  * 1. Validates required input data (sender, message, execution ID).
- * 2. Waits 2 seconds before polling to allow the cloud service to process the request.
- * 3. Polls the cloud via GET using the provided execution ID.
- * 4. Displays a notification based on the verdict and the user's preferences.
+ * 2. Polls the cloud via GET using the provided execution ID, retrying up to 8 times:
+ *    - 3 seconds before the first attempt.
+ *    - 6 seconds between subsequent attempts.
+ * 3. Displays a notification based on the verdict and the user's preferences.
  *
- * Retries up to [_maxAttempts] times using the backoff policy configured by
- * [SMishingPostWorker]. Returns [Result.failure] if the attempt limit is exceeded
- * or required input data is missing.
+ * Returns [Result.failure] if all 8 attempts are exhausted or required input data
+ * is missing.
  */
 class SMishingPollingWorker(
     context: Context,
@@ -53,42 +53,36 @@ class SMishingPollingWorker(
      * - `MESSAGE`: raw text content of the SMS message.
      * - `EXECUTION_ID`: cloud execution ID obtained from [SMishingPostWorker].
      *
+     * Polling is attempted up to 8 times, waiting 3 seconds before the first attempt
+     * and 6 seconds before each subsequent one.
+     *
      * @return [Result.success] if the analysis result was retrieved and the notification
      *         was handled;
-     *         [Result.retry] if the cloud response was unsuccessful or unavailable;
-     *         [Result.failure] if the maximum attempt count was reached or required
-     *         input data is missing.
+     *         [Result.failure] if all attempts are exhausted or required input data
+     *         is missing.
      */
     override suspend fun doWork(): Result {
-
-        if (runAttemptCount >= _maxAttempts) {
-            return Result.failure()
-        }
-
         val sender = inputData.getString("SENDER") ?: return Result.failure()
         val message = inputData.getString("MESSAGE") ?: return Result.failure()
         val executionId = inputData.getString("EXECUTION_ID") ?: return Result.failure()
 
         val userData = userInfo.userData.first()
 
-        delay(2000)
+        repeat(8) { attempt ->
+            delay(if (attempt == 0) 3000L else 6000L)
 
-        val getResponse =
-            cloudApi.getSMS(userData.userId, executionId)
-        Log.d("SMishingPolling", "Raw body: ${getResponse.body()}")
-
-        if (!getResponse.isSuccessful || getResponse.body() == null) {
-            return Result.retry()
+            try {
+                val getResponse = cloudApi.getSMS(userData.userId, executionId)
+                if (getResponse.isSuccessful && getResponse.body() != null) {
+                    handleNotification(userData.preferences, sender, message, getResponse.body()!!)
+                    return Result.success()
+                }
+            } catch (e: Exception) {
+                Log.e("SMishingPolling", "Attempt $attempt failed: ${e.message}")
+            }
         }
 
-        handleNotification(
-            userData.preferences,
-            sender,
-            message,
-            getResponse.body()!!
-        )
-
-        return Result.success()
+        return Result.failure()
     }
 
     /**
@@ -170,7 +164,7 @@ class SMishingPollingWorker(
             else         -> Color.GREEN
         }
 
-        val isThreat = results.verdict == "malicious" || results.verdict == "SUSPICIOUS"
+        val isThreat = results.verdict == "malicious" || results.verdict == "suspicious"
 
         val shortText = "De: $sender — ${results.reason}"
 

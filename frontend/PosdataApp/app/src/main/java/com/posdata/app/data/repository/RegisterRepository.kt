@@ -15,8 +15,8 @@ import com.posdata.app.utils.HashUtils
 /**
  * Repository responsible for handling the full user registration flow.
  *
- * Coordinates the creation of the user across both the local and cloud services,
- * persists the initial session, and enables the SMS receiver on success.
+ * Coordinates the creation of the user across both the local and cloud services and
+ * persists the initial session.
  *
  * Registration follows this order:
  * 1. Check the local database to ensure the email is not already registered.
@@ -26,13 +26,11 @@ import com.posdata.app.utils.HashUtils
  * If the local creation fails after the cloud user has been created, the cloud record
  * will remain as an orphan.
  *
- * @param context Application context required to enable the SMS receiver on registration.
  * @param localApi Service interface for the local API.
  * @param cloudApi Service interface for the cloud API.
  * @param userInfo Local data source used to persist the initial user session.
  */
 class RegisterRepository(
-    private val context: Context,
     private val localApi: LocalApiService,
     private val cloudApi: CloudApiService,
     private val userInfo: UserDataStore
@@ -47,7 +45,6 @@ class RegisterRepository(
      * 3. Hashes the password and creates the user credentials in the local database,
      *    using the ID assigned by the cloud.
      * 4. Persists the initial session in the local DataStore.
-     * 5. Enables the SMS receiver.
      *
      * @param fullName Full name of the user.
      * @param phoneNumber Phone number of the user.
@@ -101,8 +98,6 @@ class RegisterRepository(
                 preferences = AppPreferences(),
                 trustedContacts = emptyList()
             )
-
-            SMSReceiverEnabler.enableReceiver(context)
 
             Result.success("Registro completado con éxito")
 

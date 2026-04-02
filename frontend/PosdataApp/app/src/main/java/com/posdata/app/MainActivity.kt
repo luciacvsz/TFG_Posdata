@@ -9,6 +9,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -22,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import com.posdata.app.data.local.UserDataStore
 import com.posdata.app.data.remote.RetrofitClient
 import com.posdata.app.model.UserData
+import com.posdata.app.sms.SMSReceiverEnabler
 import com.posdata.app.ui.theme.PosdataAppTheme
 import com.posdata.app.ui.screens.login.LoginScreen
 import com.posdata.app.ui.screens.home.MainScreen
@@ -106,6 +108,11 @@ class MainActivity : ComponentActivity() {
  * same reason: session state changes in the DataStore drive navigation,
  * not imperative callback calls.
  *
+ * Observes [UserData.isLoggedIn] via [LaunchedEffect] to enable or disable
+ * [SMSReceiverEnabler] whenever the session state changes — including on app
+ * restart with an existing session, where neither login nor registration
+ * flows are triggered.
+ *
  * @param userData Current session data observed from [UserDataStore], or null while loading.
  * @param preferencesViewModel Shared ViewModel passed down to [MainScreen].
  */
@@ -115,6 +122,15 @@ private fun AppContent(
     preferencesViewModel: PreferencesViewModel
 ) {
     val rootNavController = rememberNavController()
+    val context = LocalContext.current
+
+    LaunchedEffect(userData?.isLoggedIn) {
+        if (userData?.isLoggedIn == true) {
+            SMSReceiverEnabler.enableReceiver(context)
+        } else if (userData?.isLoggedIn == false) {
+            SMSReceiverEnabler.disableReceiver(context)
+        }
+    }
 
     if(userData == null) {
         Box(

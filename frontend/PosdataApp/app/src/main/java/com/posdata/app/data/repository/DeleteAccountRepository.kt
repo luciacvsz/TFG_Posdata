@@ -14,17 +14,15 @@ import kotlinx.coroutines.flow.first
  * Repository responsible for handling the full account deletion flow.
  *
  * Coordinates the deletion across both the local and cloud services,
- * verifies token availability before proceeding, clears the local
- * session and disables the SMS receiver upon success.
+ * verifies token availability before proceeding and clears the local
+ * session.
  *
- * @param context Application context required to disable the SMS receiver.
  * @param localApi Service interface for the local API.
  * @param cloudApi Service interface for the cloud API.
  * @param userInfo Local data source used to read session data and clear it on success.
  * @param tokenConsumptionRepository Repository used to verify and consume tokens.
  */
 class DeleteAccountRepository(
-    private val context: Context,
     private val localApi: LocalApiService,
     private val cloudApi: CloudApiService,
     private val userInfo: UserDataStore,
@@ -76,7 +74,6 @@ class DeleteAccountRepository(
             }
 
             userInfo.clearSession()
-            SMSReceiverEnabler.disableReceiver(context)
 
             Result.success("Cuenta eliminada con éxito")
         } catch (e: Exception) {
