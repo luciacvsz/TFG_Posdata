@@ -19,14 +19,12 @@ import com.posdata.app.utils.HashUtils
  * Authenticates the user against the local server, fetches the full user profile
  * from the cloud, and persists the session locally.
  *
- * @param context Application context required to enable the SMS receiver on login.
  * @param localApi Service interface for the local API.
  * @param cloudApi Service interface for the cloud API.
  * @param userInfo Local data source used to persist the user session.
  * @param tokenConsumptionRepository Repository used to verify and consume tokens.
  */
 class LoginRepository(
-    private val context: Context,
     private val localApi: LocalApiService,
     private val cloudApi: CloudApiService,
     private val userInfo: UserDataStore,
@@ -41,7 +39,6 @@ class LoginRepository(
      * 2. Verifies and consumes tokens for the cloud profile fetch.
      * 3. Fetches the full user profile from the cloud service.
      * 4. Persists the session in the local DataStore.
-     * 5. Enables the SMS receiver.
      *
      * @param email Email address of the user.
      * @param password Plain-text password of the user.
@@ -92,8 +89,6 @@ class LoginRepository(
                 preferences = preferences,
                 trustedContacts = trustedContacts
             )
-
-            SMSReceiverEnabler.enableReceiver(context)
 
             Result.success("Inicio de sesión exitoso")
         } catch (e: Exception) {
