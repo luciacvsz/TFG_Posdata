@@ -8,17 +8,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.posdata.app.R
 import com.posdata.app.ui.components.PosdataInput
 import com.posdata.app.ui.components.PosdataPrimaryButton
 import com.posdata.app.ui.components.PosdataSimpleDialog
-
 
 /**
  * Login screen of the application.
@@ -100,7 +97,8 @@ fun LoginScreen(
 
         PosdataPrimaryButton(
             text = "Iniciar Sesión",
-            onClick = { viewModel.login(email, password) },
+            onClick = {
+                viewModel.login(email, password) },
             isLoading = state.isLogging
         )
 

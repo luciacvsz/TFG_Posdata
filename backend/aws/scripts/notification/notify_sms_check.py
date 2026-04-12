@@ -158,8 +158,8 @@ def notify_trusted_contacts(verdict: str, user_id: str) -> None:
     full_name = user_info.get('FULL_NAME', 'User')
     trusted_contacts = user_info.get('TRUSTED_CONTACTS', [])
 
-    phone_numbers = [c['phone_number'] for c in trusted_contacts if c.get('phone_number') != "NONE"]
-    emails = [c['email'] for c in trusted_contacts if c.get('email') != "NONE"]
+    phone_numbers = [c['phone_number'] for c in trusted_contacts if c.get('phone_number')]
+    emails = [c['email'] for c in trusted_contacts if c.get('email')]
 
     if phone_numbers:
         sms_body = sms_trusted_contact_notification_message(full_name, verdict)

@@ -1,6 +1,7 @@
 package com.posdata.app.sms
 
 import android.content.Context
+import android.util.Log
 import androidx.work.BackoffPolicy
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
@@ -56,7 +57,6 @@ class SMishingPostWorker(
      *         tokens, or missing input data).
      */
     override suspend fun doWork(): Result {
-
         val sender = inputData.getString("SENDER") ?: return Result.failure()
         val message = inputData.getString("MESSAGE") ?: return Result.failure()
 

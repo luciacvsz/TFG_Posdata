@@ -21,14 +21,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.posdata.app.model.UserData
 import com.posdata.app.ui.navigation.Screen
-import com.posdata.app.ui.screens.login.LoginViewModel
-import com.posdata.app.ui.screens.login.LoginViewModelFactory
 import com.posdata.app.ui.screens.profile.ProfileContent
 import com.posdata.app.ui.screens.trusted_contacts.TrustedContactsContent
 import com.posdata.app.ui.screens.preferences.PreferencesContent
 import com.posdata.app.ui.screens.preferences.PreferencesViewModel
 import com.posdata.app.ui.screens.profile.ProfileViewModel
-import com.posdata.app.ui.screens.register.RegisterViewModel
 import com.posdata.app.ui.screens.trusted_contacts.TrustedContactsViewModel
 
 /**

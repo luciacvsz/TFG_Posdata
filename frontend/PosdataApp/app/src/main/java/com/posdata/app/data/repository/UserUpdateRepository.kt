@@ -47,7 +47,9 @@ class UserUpdateRepository(
      *
      * - **Credential update** (email and/or password):
      *   - Password is always updated in the local database only.
-     *   - Email is updated in the local database, the cloud profile, and the DataStore.
+     *   - Email is first checked against the local database to ensure it is not
+     *     already in use. If the check passes, it is updated in the local database,
+     *     the cloud profile, and the DataStore.
      *     Requires token consumption only if email is provided.
      *
      * - **Profile update** (fullName and/or phoneNumber):
@@ -59,7 +61,8 @@ class UserUpdateRepository(
      * @param email New email address, or null to leave it unchanged.
      * @param password New plain-text password, or null to leave it unchanged.
      * @return [Result.success] if the update was applied successfully;
-     *         [Result.failure] with a descriptive exception if any step fails.
+     *         [Result.failure] with a descriptive exception if any step fails,
+     *         including if the provided email is already registered in the system.
      */
     override suspend fun updateProfile(
         fullName: String?,
@@ -78,6 +81,19 @@ class UserUpdateRepository(
             if (isCredentialUpdate) {
 
                 if (email != null) {
+
+                    val localCheckResponse = localApi.getUser(email)
+                    val localCheckData = localCheckResponse.body()
+
+                    if (!localCheckResponse.isSuccessful || localCheckData == null) {
+                        return Result.failure(
+                            Exception("No se ha podido verificar el correo. Inténtelo de nuevo más tarde")
+                        )
+                    } else if (localCheckData.success) {
+                        return Result.failure(
+                            Exception("Ya existe una cuenta con este correo electrónico")
+                        )
+                    }
 
                     val tokenResult = tokenConsumptionRepository.haveEnoughTokens(CloudOperation.PATCH_USER)
                     if (tokenResult.isFailure) {

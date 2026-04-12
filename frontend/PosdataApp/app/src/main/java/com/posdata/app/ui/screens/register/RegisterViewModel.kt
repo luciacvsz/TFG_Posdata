@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.posdata.app.data.local.UserDataStore
 import com.posdata.app.data.remote.RetrofitClient
 import com.posdata.app.data.repository.RegisterRepository
-import com.posdata.app.ui.screens.login.LoginState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

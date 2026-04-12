@@ -158,15 +158,18 @@ def lambda_handler(event, context):
         
         if hash_result := hash_check(message):
             response.update(hash_result)
+            logger.info(f"Successfully completed SMS list check for user: {user_id} | Execution ID: {execution_id} | Verdict: {response['verdict']}")
             return response
 
         urls = list(set(extract_urls(message)))
         if url_result := url_check(urls, message):
             response.update(url_result)
+            logger.info(f"Successfully completed SMS list check for user: {user_id} | Execution ID: {execution_id} | Verdict: {response['verdict']}")
             return response
 
         if sender_result := sender_check(sender):
             response.update(sender_result)
+            logger.info(f"Successfully completed SMS list check for user: {user_id} | Execution ID: {execution_id} | Verdict: {response['verdict']}")
             return response
         
         logger.info(f"Successfully completed SMS list check for user: {user_id} | Execution ID: {execution_id} | Verdict: {response['verdict']}")

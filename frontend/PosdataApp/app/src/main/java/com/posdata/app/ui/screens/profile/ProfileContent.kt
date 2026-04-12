@@ -10,12 +10,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.posdata.app.model.UserData
 import com.posdata.app.ui.components.PosdataClickableCard
 import com.posdata.app.ui.components.PosdataEditDialog
@@ -114,7 +112,8 @@ fun ProfileContent(
         PosdataPrimaryButton(
             text = "Cerrar Sesión",
             isLoading = isLoading,
-            onClick = { viewModel.logout() }
+            onClick = {
+                viewModel.logout() }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -142,6 +141,7 @@ fun ProfileContent(
 
     when (val state = uiState) {
         is ProfileUiState.Success -> {
+            android.util.Log.d("POSDATA_PERF", "T2 - Edición perfil completada: ${System.currentTimeMillis()}")
             PosdataStatusDialog(
                 isSuccess = true,
                 message = state.message,
@@ -174,6 +174,7 @@ fun ProfileContent(
             isPassword = currentField == ProfileField.PASSWORD,
             onDismiss = { showEditDialog = false },
             onSave = { newValue ->
+                android.util.Log.d("POSDATA_PERF", "T1 - Edición perfil pulsado: ${System.currentTimeMillis()}")
                 viewModel.updateProfileField(field = currentField, newValue = newValue)
                 showEditDialog = false
             }

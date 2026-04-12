@@ -62,6 +62,7 @@ class SMishingPollingWorker(
      *         is missing.
      */
     override suspend fun doWork(): Result {
+
         val sender = inputData.getString("SENDER") ?: return Result.failure()
         val message = inputData.getString("MESSAGE") ?: return Result.failure()
         val executionId = inputData.getString("EXECUTION_ID") ?: return Result.failure()
@@ -74,6 +75,7 @@ class SMishingPollingWorker(
             try {
                 val getResponse = cloudApi.getSMS(userData.userId, executionId)
                 if (getResponse.isSuccessful && getResponse.body() != null) {
+                    val tGet = System.currentTimeMillis()
                     handleNotification(userData.preferences, sender, message, getResponse.body()!!)
                     return Result.success()
                 }
@@ -127,6 +129,9 @@ class SMishingPollingWorker(
      *
      * The notification title, icon, and accent color reflect the verdict severity.
      * Sound and vibration are controlled by the user's [notificationSound] preference.
+     * Two separate notification channels are used to ensure sound and vibration settings
+     * are applied correctly, since Android does not allow modifying channel properties
+     * after the channel has been created.
      * Extended details are shown in the expanded notification view if
      * [explanationMode] is [AppExplanationMode.ON] and details are available.
      *
@@ -145,7 +150,6 @@ class SMishingPollingWorker(
     ) {
         val notificationManager =
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channelId = "posdata_analysis_channel"
 
         val title = when (results.verdict) {
             "malicious"  -> "⚠️ ¡Amenaza Detectada!"
@@ -179,6 +183,11 @@ class SMishingPollingWorker(
             if (explanationMode == AppExplanationMode.ON && !results.details.isNullOrEmpty()) {
                 append("\n\n🔍 Detalles:\n${results.details}")
             }
+        }
+
+        val channelId = when (notificationSound) {
+            AppNotificationSound.ON  -> "posdata_analysis_channel_sound"
+            AppNotificationSound.OFF -> "posdata_analysis_channel_silent"
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
