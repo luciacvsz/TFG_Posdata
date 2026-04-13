@@ -1,0 +1,11 @@
+{
+  "body": {
+    "trusted_contacts": [
+      {
+        "name": "string",
+        "phone_number": "string",
+        "email": "string"
+      }
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+{"threshold": 0.5, "features": ["text_len", "word_count", "avg_word_len", "caps_ratio", "digit_ratio", "excl_count", "ques_count", "num_count", "has_urgency", "has_action", "has_financial", "has_prize", "has_threat", "has_url", "has_phone", "url_len", "has_shortener"], "model_version": "lgbm_v1"}

@@ -1,0 +1,24 @@
+{
+  "statusCode": 200,
+  "body": {
+    "full_name": "string",
+    "contact": {
+      "phone_number": "string",
+      "email": "string"
+    },
+    "preferences": {
+      "font_size": "string",
+      "color_scheme": "string",
+      "notification_sound": "string",
+      "exhaustivity": "string",
+      "explanation_mode": "string"
+    },
+    "trusted_contacts": [
+      {
+        "name": "string",
+        "phone_number": "string",
+        "email": "string"
+      }
+    ]
+  }
+}

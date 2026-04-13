@@ -1,0 +1,6 @@
+{
+  "statusCode": 500,
+  "body": {
+    "error": "Internal server error"
+  }
+}

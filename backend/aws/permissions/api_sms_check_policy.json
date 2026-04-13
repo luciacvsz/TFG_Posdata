@@ -1,0 +1,10 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["states:StartExecution"],
+      "Resource": "arn:aws:states:${REGION}:${ACCOUNT_ID}:stateMachine:${SMS_CHECK_STATE_MACHINE_NAME}"
+    }
+  ]
+}

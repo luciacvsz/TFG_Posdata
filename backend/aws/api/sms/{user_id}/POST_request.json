@@ -1,0 +1,6 @@
+{
+  "body": {
+    "sender": "string",
+    "message": "string"
+  }
+}

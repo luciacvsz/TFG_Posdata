@@ -1,0 +1,6 @@
+{
+  "statusCode": 400,
+  "body": {
+    "ValueError": "string"
+  }
+}

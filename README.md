@@ -1,32 +1,113 @@
-# Posdata: Plataforma de Detección de Phishing para Mayores
+# Posdata — SMishing Detection Platform for Older Adults
 
-![Status](https://img.shields.io/badge/Estado-En_Desarrollo-yellow)
-![TFG](https://img.shields.io/badge/Tipo-TFG-blue)
-![Python](https://img.shields.io/badge/BackEnd-Python-3776AB?logo=python&logoColor=white)
-![Kotlin](https://img.shields.io/badge/FrontEnd-Kotlin-7F52FF?logo=kotlin&logoColor=white)
-![AWS](https://img.shields.io/badge/Cloud-AWS-232F3E?logo=amazon-aws&logoColor=white)
+Posdata is a proof-of-concept SMishing detection platform designed to protect older adults from SMS-based phishing attacks. It combines a serverless cloud backend deployed on AWS, a local authentication server, and an Android client application, providing automatic SMS interception, AI-powered fraud analysis, and accessible verdict notifications tailored to senior users.
 
-## Descripción del Proyecto
+> This project was developed as a Final Degree Project (TFG) in the context of the growing threat of digital fraud targeting elderly people, a vulnerable and often overlooked demographic in the design of cybersecurity systems.
 
-**Posdata** es un sistema diseñado para proteger a las personas mayores frente a ataques de phishing. El proyecto combina una aplicación móvil accesible con una arquitectura serverless en la nube capaz de analizar amenazas en tiempo real mediante Inteligencia Artificial.
+---
 
-Este repositorio contiene el código fuente, los modelos de IA y la documentación asociada al Trabajo de Fin de Grado.
+## Architecture
 
-## Arquitectura del Sistema
+![Posdata General Architecture](diagrams/Diagrama_General_Posdata.jpg)
 
-El sistema se divide en tres bloques fundamentales:
+The system is structured around three main components:
 
-1.  **Frontend (Android):** Aplicación nativa desarrollada en Kotlin que intercepta notificaciones y SMS, priorizando la accesibilidad.
-2.  **Backend (AWS Serverless):** Núcleo de procesamiento basado en AWS Lambda.
-3.  **Inteligencia Artificial:** Modelo híbrido de detección de phishing.
+- **AWS Serverless Backend**: Orchestrates SMS analysis through a Step Functions state machine, invoking a deterministic list-based classifier and a probabilistic AI classifier sequentially, followed by a notification module.
+- **Local Authentication Server**: A Node.js server managing user credentials, token consumption and access control, decoupled from the cloud processing layer on a private MySQL database.
+- **Android Client App**: A fully accessible, highly configurable Android application that intercepts incoming SMS messages, submits them for analysis, and displays verdict notifications adapted to the user's personal preferences.
 
-## Estructura del Repositorio
+---
 
-Este repositorio sigue la siguiente estructura, por medio de la cual se centralizan todos los aspectos del TFG:
+## Repository Structure
 
-```text
-posdata/
-├── backend/          # Funciones Lambda y lógica de servidor (Python)
-├── mobile-app/       # Código fuente de la aplicación Android (Kotlin)
-├── ai-research/      # Notebooks de entrenamiento y datasets (Jupyter)
-└── docs/             # Documentación, memoria del TFG y diagramas
+```
+TFG_POSDATA/
+├── backend/
+│   ├── aws/
+│   │   ├── api/                        # API Gateway route definitions (SMS + Users)
+│   │   ├── layers/posdata-utils-layer/ # Shared Lambda utility layer
+│   │   ├── permissions/                # IAM roles and policies
+│   │   └── scripts/
+│   │       ├── detection/              # Lambda handlers: AI check, lists check, hash learning
+│   │       ├── notification/           # Lambda handler: notify results
+│   │       └── users/                  # Lambda handlers: user management
+│   └── colab/
+│       ├── models/                     # Trained model files (distilbert_v1, lgbm_v1, meta_v1)
+│       ├── scripts/datasets/           # Training datasets
+│       ├── dataset_exploration.ipynb   # Dataset analysis and visualization
+│       ├── deployment.ipynb            # Model export and deployment packaging
+│       ├── feature_extraction_layer.ipynb      # LightGBM feature extraction development
+│       ├── linguistic_prediction_layer.ipynb   # DistilBERT fine-tuning
+│       └── metaclassifier.ipynb        # Meta-classifier training and evaluation
+├── diagrams/                           # Architecture and flow diagrams
+├── frontend/PosdataApp/                # Android client application (Kotlin + Jetpack Compose)
+├── localserver/                        # Node.js local authentication server
+├── LICENSE
+├── Posdata_Manual.pdf                  # Accessible user manual for seniors and families
+└── README.md
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Android Studio**: To build and emulate the Android client
+- **XAMPP**: To run the local authentication server database
+- **AWS Account**: The backend is fully deployed on AWS (EU Paris region). Lambda functions, Step Functions, DynamoDB tables, S3 buckets, API Gateway, SQS, SNS and SES are all required services.
+- **Node.js**: To run the local server
+
+### Local Server Setup
+
+1. Start XAMPP and ensure Apache and MySQL are running.
+2. Create a database named `posdata_db` with a `users` table containing the following fields:
+
+| Field | Type |
+|-------|------|
+| `id` | INT (PK, AUTO_INCREMENT) |
+| `user_id` | VARCHAR |
+| `email` | VARCHAR |
+| `password_hash` | VARCHAR |
+| `tokens` | INT |
+| `created_at` | TIMESTAMP |
+
+3. Navigate to the `localserver/` directory and install dependencies:
+```bash
+npm install
+```
+4. Start the server:
+```bash
+node server.js
+```
+
+### Android App Setup
+
+1. Open `frontend/PosdataApp/` in Android Studio.
+2. Create a `local.env` file in the project assets folder (if not already present) and add the following:
+```
+API_KEY=your_posdata_api_key
+CLOUD_API_URL=https://your-aws-api-gateway-url/
+LOCAL_API_URL=http://your-local-server-url/
+```
+3. Build and run the project on an Android emulator (API level 26 or higher recommended).
+
+> The app is designed to be used with an emulator. SMS interception is tested via Android Studio's emulator SMS injection tool.
+
+---
+
+## User Manual
+
+A physical-style accessible user manual for seniors and families is available at the root of the repository: [`Posdata_Manual.pdf`](Posdata_Manual.pdf). It covers platform setup, key features, and phishing awareness content tailored to older adults.
+
+---
+
+## License
+
+See [`LICENSE`](LICENSE) for details.
+
+---
+
+## About
+
+Posdata was designed and developed by a Computer Science student as a Final Degree Project, motivated by the real and growing risk of SMS phishing fraud among older adults. The system addresses not only technical detection accuracy but also accessibility, explainability, and the specific cognitive and social needs of its target users.

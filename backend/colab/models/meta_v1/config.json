@@ -1,0 +1,1 @@
+{"model_version": "meta_v1", "features": ["score_lgbm", "score_distilbert"], "threshold": 0.5}
