@@ -96,24 +96,6 @@ LOCAL_API_URL=http://your-local-server-url/
 
 ---
 
-## AI Classification Layer
-
-The probabilistic detection layer is built on a hybrid ensemble model trained on a bilingual (English/Spanish) SMS dataset:
-
-- **LightGBM** — heuristic feature-based classifier (structural, semantic and content features)
-- **DistilBERT** (multilingual, fine-tuned) — NLP-based classifier exported to ONNX for Lambda deployment
-- **Logistic Regression Meta-classifier** — combines probability scores from both models to produce a final verdict
-
-Training notebooks are available under `backend/colab/`. Trained model files are stored under `backend/colab/models/` and deployed to an S3 bucket accessed by the AI Lambda at runtime.
-
-| Model | Accuracy | F1 (spam) |
-|-------|----------|-----------|
-| LightGBM | 0.96 | 0.90 |
-| DistilBERT | 0.98 | 0.95 |
-| Meta-classifier | 0.98 | 0.96 |
-
----
-
 ## User Manual
 
 A physical-style accessible user manual for seniors and families is available at the root of the repository: [`Posdata_Manual.pdf`](Posdata_Manual.pdf). It covers platform setup, key features, and phishing awareness content tailored to older adults.
