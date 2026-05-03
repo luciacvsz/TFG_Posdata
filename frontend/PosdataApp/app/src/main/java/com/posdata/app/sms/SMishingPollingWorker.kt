@@ -62,7 +62,6 @@ class SMishingPollingWorker(
      *         is missing.
      */
     override suspend fun doWork(): Result {
-
         val sender = inputData.getString("SENDER") ?: return Result.failure()
         val message = inputData.getString("MESSAGE") ?: return Result.failure()
         val executionId = inputData.getString("EXECUTION_ID") ?: return Result.failure()

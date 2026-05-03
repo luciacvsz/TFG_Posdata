@@ -71,7 +71,7 @@ def url_check(urls: list, message: str) -> dict | None:
     whitelisted_count = 0
     for url in urls:
         if get_item_by_pk_sk(table, 'BLACKLIST_URL', url):
-            trigger_hash_learning_async(sqs, HASHING_QUEUE_URL, message, f"Blocked by blacklisted URL: {url}")
+            trigger_hash_learning_async(sqs, HASHING_QUEUE_URL, message, f"Bloqueado por enlace en lista negra: {url}")
             return {
                 "verdict": Verdict.MALICIOUS.value,
                 "reason": "El mensaje contiene un enlace peligroso",
