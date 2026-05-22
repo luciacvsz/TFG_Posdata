@@ -104,7 +104,11 @@ A physical-style accessible user manual for seniors and families is available at
 
 ## License
 
-See [`LICENSE`](LICENSE) for details.
+This repository contains both source code and academic documentation, which are distributed under different licenses:
+
+* **Software:** All the source code of the project (/backend, /frontend, and /localserver) is licensed under the **Apache License 2.0**. You can check the details in the [`LICENSE`](LICENSE) file attached to this repository.
+
+* **Documentation:** The user manual, the resources in /diagrams, and the evaluation resources in /eval are licensed under the **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**.
 
 ---
 
